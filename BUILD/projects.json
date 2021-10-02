@@ -1,0 +1,19 @@
+{
+	"projects": {
+		"iot-box-lan-core": {
+			"title": "iot-box-lan" ,
+			"variants": {
+				"esp32-poe": {
+					"title": "esp32-poe"
+				},
+				"esp32-gateway": {
+					"title": "esp32-gw"
+				},
+				"esp32-wifi": {
+					"title": "esp32-wifi"
+				}
+			}
+		}
+	}
+}
+

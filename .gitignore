@@ -1,0 +1,12 @@
+.idea/
+BUILD/local-config.json
+BUILD/fw
+BUILD/logs
+.vscode
+.travis.yml
+test/
+
+libs/versionId.h
+
+workspace.code-workspace
+.DS_Store
