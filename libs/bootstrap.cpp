@@ -4,6 +4,7 @@
 #include <utils/httpRequest.cpp>
 #include <utils/ota_update.cpp>
 
+#include <lib/telnet/ShpTelnet.cpp>
 
 #include <data/dataSerial.cpp>
 #include <data/dataOneWire.cpp>

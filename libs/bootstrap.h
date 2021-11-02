@@ -4,6 +4,8 @@
 #include <utils/httpRequest.h>
 #include <utils/ota_update.h>
 
+#include <lib/telnet/ShpTelnet.h>
+
 #include <bus/busI2C.h>
 #include <expanders/gpioExpander.h>
 #include <expanders/gpioExpanderI2C.h>

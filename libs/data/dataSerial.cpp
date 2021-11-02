@@ -9,7 +9,9 @@ ShpDataSerial::ShpDataSerial() :
 																m_mode(0),
 																m_rxPin(-1), 
 																m_txPin(-1),
-																m_hwSerial(NULL)
+																m_telnetPort(0),
+																m_hwSerial(NULL),
+																m_telnet(NULL)
 {
 }
 
@@ -23,7 +25,10 @@ void ShpDataSerial::init(JsonVariant portCfg)
 			"speed": "5",
 			"pinRX": 16,
 			"pinTX": 17,
-			"mode": "1"
+			"mode": "1",
+			"useTelnet": 1,
+			"telnetPort": "5001"
+
 		}
 	-----------------------------*/
 
@@ -63,12 +68,27 @@ void ShpDataSerial::init(JsonVariant portCfg)
 
 	m_hwSerial = new HardwareSerial(g_cntUarts++);
 	m_hwSerial->begin(m_speed, m_mode, m_rxPin, m_txPin);
+
+	if (portCfg.containsKey("useTelnet") && portCfg["useTelnet"] == 1)
+	{
+		m_telnetPort = (int)(portCfg["telnetPort"]);
+		if (!m_telnetPort)
+			m_telnetPort = 5000 + g_cntUarts - 1;
+		m_telnet = new ShpTelnet(m_telnetPort);
+	}	
 }
 
 void ShpDataSerial::loop()
 {
 	if (!m_hwSerial)
 		return;
+
+	if (m_telnet)
+	{
+		m_telnet->loop(m_hwSerial, m_hwSerial);
+		ShpIOPort::loop();
+		return;
+	}
 
 	while (m_hwSerial->available()) 
 	{
@@ -95,9 +115,6 @@ void ShpDataSerial::loop()
 	{
 		if (m_sbCnt)
 		{
-			Serial.print("buffer: ");
-			Serial.println(m_buffer);
-			
 			app->publish(m_buffer, m_valueTopic.c_str());
 		}
 		
