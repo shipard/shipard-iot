@@ -1,4 +1,4 @@
-extern Application *app;
+extern SHP_APP_CLASS *app;
 
 
 ShpControlBinary::ShpControlBinary() : 
@@ -17,6 +17,8 @@ ShpControlBinary::ShpControlBinary() :
 		m_queue[i].startAfter = 0;
 		m_queue[i].pinState = 0;
 	}
+
+	m_sendMode = SM_LOOP;
 }
 
 void ShpControlBinary::init(JsonVariant portCfg)
@@ -362,6 +364,7 @@ void ShpControlBinary::setPinState(uint8_t value)
 		if (m_gpioExpander)
 		{
 			m_gpioExpander->setPinState(m_pin, value);
+			app->setValue(m_portId, (value == m_PinStateOn) ? "1" : "0", m_sendMode);
 			log(shpllDebug, "set gpioExp pin state %d", value);
 		}
 		else
@@ -373,6 +376,7 @@ void ShpControlBinary::setPinState(uint8_t value)
 	#endif
 	{
 		digitalWrite(m_pin, value);
+		app->setValue(m_portId, (value == m_PinStateOn) ? "1" : "0", m_sendMode);
 		log(shpllDebug, "set pin state %d", value);
 	}
 }

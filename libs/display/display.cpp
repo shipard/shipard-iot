@@ -1,6 +1,3 @@
-extern Application *app;
-
-
 ShpDisplay::ShpDisplay() : 
 											m_queueRequests(0)
 {

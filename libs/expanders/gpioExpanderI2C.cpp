@@ -1,11 +1,13 @@
-extern Application *app;
+extern SHP_APP_CLASS *app;
 
 
 ShpGpioExpanderI2C::ShpGpioExpanderI2C() : 
 																						m_expType(SHP_GPIO_CHIP_PCF8575),
 																						m_bus(NULL),
 																						m_address(-1),
-																						m_bits(0)
+																						m_bits(0),
+																						m_inputBits(0),
+																						m_nextDigitalInputRead(0)
 {
 }
 
@@ -76,7 +78,6 @@ void ShpGpioExpanderI2C::init2()
 
 	if (m_bus)
 	{		
-		//Serial.println("FOUND I2C BUS");
 		delay(100);
 		if (m_expType == SHP_GPIO_CHIP_PCF8575)
 		{
@@ -137,7 +138,49 @@ void ShpGpioExpanderI2C::write2B(uint8_t data1, uint8_t data2)
   m_bus->write2B(m_address, data1, data2);
 }
 
+void ShpGpioExpanderI2C::readDigitalInput()
+{
+	uint8_t data = 0;
+
+	if (m_expType == SHP_GPIO_OLIMEX_MODIO)
+	{
+		m_bus->wire()->beginTransmission(m_address);
+		m_bus->wire()->write(0x20);
+		m_bus->wire()->endTransmission();
+		m_bus->wire()->requestFrom((int)m_address, 1);
+		data = m_bus->wire()->read();
+
+		for (uint8_t i = 4; i < 8; i++)
+		{
+			uint8_t newValue = (data & (bit(i - 4))) ? 1 : 0;
+			uint8_t oldValue = (m_bits & (bit(i))) ? 1 : 0;
+
+			if (newValue != oldValue || !m_nextDigitalInputRead)
+			{
+				if (newValue)
+					m_bits |= bit(i);
+				else	
+					m_bits &= ~bit(i);
+				
+				if (m_inputIOPorts[i])
+					m_inputIOPorts[i]->setValue(newValue);
+			}
+		}
+	}
+}
+
 void ShpGpioExpanderI2C::loop()
 {
 	ShpIOPort::loop();
+
+	if (m_expType == SHP_GPIO_OLIMEX_MODIO)
+	{
+		unsigned long now = millis();
+		if (now < m_nextDigitalInputRead)
+			return;
+
+		readDigitalInput();
+
+		m_nextDigitalInputRead = now + 250;
+	}
 }

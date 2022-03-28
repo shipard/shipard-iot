@@ -1,4 +1,3 @@
-extern Application *app;
 extern int g_cntUarts;
 
 void dataHexStr(uint8_t* data, size_t len, char str[]) 
@@ -66,7 +65,7 @@ void ShpDisplayNextion::init(JsonVariant portCfg)
 	if (m_txPin < 0 || m_rxPin < 0)
 		return;
 
-	//Serial.printf("DISPLAY NEXTION START: rx: %d, tx: %d\n", m_rxPin, m_txPin);
+	Serial.printf("DISPLAY NEXTION START: rx: %d, tx: %d\n", m_rxPin, m_txPin);
 
 	m_hwSerial = new HardwareSerial(g_cntUarts++);
 	m_hwSerial->begin(m_speed, m_mode, m_rxPin, m_txPin);
@@ -76,7 +75,7 @@ void ShpDisplayNextion::init(JsonVariant portCfg)
 
 void ShpDisplayNextion::doCommand(const char *cmd)
 {
-	Serial.println("---DO COMMAND---");
+	//Serial.println("---DO COMMAND---");
 
 	int len = m_hwSerial->print(cmd);
 	if (len <= 0)

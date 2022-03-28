@@ -1,5 +1,5 @@
-#ifndef APPLICATION_H
-#define APPLICATION_H
+#ifndef SHP_APPLICATION_H
+#define SHP_APPLICATION_H
 
 #include "consts.h"
 #include "versionId.h"
@@ -32,6 +32,11 @@ static const char* const SHP_LOG_LEVEL_NAMES[shpllALL] =
 	"DEBUG-ALL" 	// shpllverbose
 };
 
+#define IOT_BOX_INFO_VALUES "_states"
+#define SM_NONE 0
+#define SM_NOW 1
+#define SM_LOOP 2
+
 
 #ifdef SHP_GSM
 class ShpModemGSM;
@@ -45,27 +50,24 @@ class Application {
 
 		Application();
 
-		void checks();
-		void checkMqtt();
+		virtual void checks();
 
-		void init();
+		virtual void init();
 
 		void initIOPorts();
 		void init2IOPorts();
 		void addIOPort(ShpIOPort *ioPort, JsonVariant portCfg);
 		ShpIOPort *ioPort(const char *portId);
 
-		void setup();
-		void initNetworkInfo();
-		void loadBoxConfig();
-		void loop();
-		void IP_Got();
-		void IP_Lost();
+		virtual void setup();
+		virtual void loadBoxConfig();
+		virtual void loop();
+		virtual void setIotBoxCfg(String data);
 
-		void onMqttMessage(const char* topic, byte* payload, unsigned int length);
 		void addCmdQueueItemFromMessage(const char* commandId, byte* payload, unsigned int length);
 		void addCmdQueueItem(const char *commandId, String payload, unsigned long startAfter);
 		void runCmdQueueItem(int i);
+		void doSet(byte* payload, unsigned int length);
 
 		void reboot();
 		void setLogLevel(const char *logLevel);
@@ -74,7 +76,14 @@ class Application {
 		void log(const char *msg, uint8_t level);
 		void iotBoxInfo();
 
-		boolean publish(const char *payload, const char *topic = NULL);
+		virtual boolean publish(const char *payload, const char *topic = NULL);
+		void setValue(const char *key, const char *value, uint8_t sendMode);
+		void setValue(const char *key, const int value, uint8_t sendMode);
+		void setValue(const char *key, const float value, uint8_t sendMode);
+		virtual void publishData(uint8_t sendMode);
+		void publishAction(const char *key, const char *value);
+		void publishAction(const char *key, const int value);
+		void publishAction(const char *key, const float value);
 
 		void signalLedOn();
 		void signalLedOff();
@@ -83,8 +92,6 @@ class Application {
 
 	public:
 
-		static bool eth_connected;
-
 		uint8_t m_logLevel;
 		int m_pinLed;
 		
@@ -92,19 +99,11 @@ class Application {
 		ShpModemGSM *m_modem;
 		#endif
 
-		WiFiClient lanClient;
-		#ifdef SHP_MQTT
-		PubSubClient *mqttClient;
-		#endif
-
-		IPAddress ipLocal;
-
-
-		boolean m_networkInfoInitialized;
 		String cfgServerHostName;
 		String mqttServerHostName;
 		String macHostName;
 
+		String m_deviceTopic;
 		String m_deviceSubTopic;
 
 		StaticJsonDocument<16384> m_boxConfig;
@@ -112,7 +111,6 @@ class Application {
 
 		ShpIOPort **m_ioPorts;
 		uint8_t m_countIOPorts;
-
 
 	public:
 
@@ -132,6 +130,11 @@ class Application {
 
 		int m_cmdQueueRequests;
 		CmdQueueItem m_cmdQueue[APP_CMD_QUEUE_LEN];
+
+protected:
+
+		StaticJsonDocument<4096> m_iotBoxInfo;
+		bool m_publishDataOnNextLoop;
 
 };
 

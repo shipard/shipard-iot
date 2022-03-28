@@ -1,4 +1,4 @@
-extern Application *app;
+extern SHP_APP_CLASS *app;
 
 ShpMeteoBH1750::ShpMeteoBH1750() : 
 																	m_address(-1),

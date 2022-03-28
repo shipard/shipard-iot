@@ -1,10 +1,14 @@
 
 #include <application.h>
 #include <utils/utility.h>
+#ifdef SHP_NETWORK_LAN
 #include <utils/httpRequest.h>
 #include <utils/ota_update.h>
+#endif
 
+#ifdef SHP_NETWORK_LAN
 #include <lib/telnet/ShpTelnet.h>
+#endif
 
 #include <bus/busI2C.h>
 #include <expanders/gpioExpander.h>
@@ -29,18 +33,29 @@
 
 #include <sensors/sensorDistanceUS.h>
 
+#ifdef ESP32
 #include <meteo/meteoDHT.h>
+#endif
 #include <meteo/meteoBME280.h>
 
 #include <BH1750.h>
 #include <meteo/meteoBH1750.h>
 
 #include <display/display.h>
+#ifdef SHP_NETWORK_LAN
 #include <display/displayNextion.h>
+#endif
 
+#ifdef SHP_NETWORK_LAN
+#include <networks/espNow/espNow.h>
+#include <networks/espNow/espNowServer.h>
+#endif
+#ifdef SHP_NETWORK_ESP_NOW
+#include <networks/espNow/espNow.h>
+#include <networks/espNow/espNowClient.h>
+#endif
 
 #ifdef SHP_WIFI
 #include <lib/WiFiManager/WiFiManager.h>
 #endif
-
 

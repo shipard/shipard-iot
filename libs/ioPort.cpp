@@ -1,12 +1,15 @@
-extern Application *app;
+extern SHP_APP_CLASS *app;
 
-ShpIOPort::ShpIOPort () : m_portId(NULL), m_appPortIndex (0), m_valid(false), m_paused(false), m_pausedTo(0)
+ShpIOPort::ShpIOPort () : m_portId(NULL), m_appPortIndex (0), m_valid(false), m_paused(false), m_pausedTo(0), m_sendMode(SM_LOOP), m_sendAsAction(0)
 {
 }
 
 void ShpIOPort::init(JsonVariant portCfg)
 {
 	m_portId = portCfg["portId"];
+
+	if (portCfg.containsKey("sendAsAction"))
+		m_sendAsAction = portCfg["sendAsAction"];
 
 	if (portCfg["valueTopic"])
 	{

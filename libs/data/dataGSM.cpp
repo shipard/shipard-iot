@@ -1,4 +1,4 @@
-extern Application *app;
+extern SHP_APP_CLASS *app;
 
 
 extern int g_cntUarts;
@@ -442,7 +442,7 @@ bool ShpDataGSM::checkIncomingSMS()
 	{
 		log(shpllError, "check SMS failed");
 		printResponse();
-		return false;
+		//return false;
 	}
 	delay(100);
 

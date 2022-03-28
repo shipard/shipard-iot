@@ -1,4 +1,4 @@
-extern Application *app;
+extern SHP_APP_CLASS *app;
 extern int g_cntUarts;
 
 

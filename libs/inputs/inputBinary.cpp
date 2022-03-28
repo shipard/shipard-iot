@@ -1,9 +1,14 @@
-extern Application *app;
+extern SHP_APP_CLASS *app;
 
 
 ShpInputBinary::ShpInputBinary() : 
 																	m_pin(-1),
 																	m_timeout(100),
+																	m_pinExpPortId(NULL),
+																	#ifdef SHP_GPIO_EXPANDER_I2C_H
+																	m_gpioExpander(NULL),
+																	#endif
+																	m_inputMode(IBMODE_INT),
 																	m_detectedValue(HIGH),
 																	m_lastValue(127),
 																	m_lastChangeMillis(0),
@@ -27,7 +32,7 @@ void ShpInputBinary::init(JsonVariant portCfg)
 	ShpIOPort::init(portCfg);
 
 	// -- pin
-	if (portCfg["pin"] != nullptr)
+	if (portCfg.containsKey("pin"))
 		m_pin = portCfg["pin"];
 
 	if (m_pin < 0)
@@ -40,8 +45,30 @@ void ShpInputBinary::init(JsonVariant portCfg)
 	if (!m_timeout)
 		m_timeout = 100;
 
-	pinMode(m_pin, INPUT);
-	attachInterrupt(m_pin, std::bind(&ShpInputBinary::onPinChange, this, m_pin), RISING);
+	if (portCfg["pin_expPortId"] != nullptr)
+		m_pinExpPortId = portCfg["pin_expPortId"];
+}
+
+void ShpInputBinary::init2()
+{
+	#ifdef SHP_GPIO_EXPANDER_I2C_H
+	if (m_pinExpPortId)
+	{
+		m_gpioExpander = (ShpGpioExpander*)app->ioPort(m_pinExpPortId);
+		m_inputMode = IBMODE_GPIO_EXP;
+		if (m_gpioExpander)
+		{
+			m_gpioExpander->setInputPinIOPort(m_pin, this);
+			m_valid = true;
+		}
+	}
+	else
+	#endif
+	{
+		pinMode(m_pin, INPUT);
+		attachInterrupt(m_pin, std::bind(&ShpInputBinary::onPinChange, this, m_pin), RISING);
+		m_valid = true;
+	}
 }
 
 void ShpInputBinary::onMessage(const char* topic, const char *subCmd, byte* payload, unsigned int length)
@@ -57,35 +84,65 @@ void ShpInputBinary::onPinChange(int pin)
 	m_lastChangeMillis = millis();
 }
 
+void ShpInputBinary::setValue(int8_t value)
+{
+	m_needSend = true;
+	m_detectedValue = value;
+}
+
 void ShpInputBinary::loop()
 {
-	if (m_needSend)
+	if (m_inputMode == IBMODE_INT)
 	{
-		app->publish((m_detectedValue == HIGH) ? "1" : "0", m_valueTopic.c_str());
-		m_needSend = false;
-		m_lastValue = m_detectedValue;
-		m_waitForChange = true;
+		if (m_needSend)
+		{
+			const char *pv = (m_detectedValue == HIGH) ? "1" : "0";
+			if (m_sendAsAction)
+				app->publishAction(m_portId, pv);
+
+			app->publish(pv, m_valueTopic.c_str());
+			
+			m_needSend = false;
+			m_lastValue = m_detectedValue;
+			m_waitForChange = true;
+			return;
+		}
+
+		if (!m_waitForChange)
+			return;
+
+		unsigned long now = millis();
+		if (now - m_lastChangeMillis < m_timeout)
+			return;
+
+		int newValue = digitalRead(m_pin);
+		//Serial.printf("val=%d\n", newValue);
+		if (newValue == m_lastValue)
+			return;
+
+		m_lastValue = newValue;
+		m_disable = false;
+		if (m_lastValue != m_detectedValue)
+			m_waitForChange = false;
+
+		const char *pv = (newValue == HIGH) ? "1" : "0";
+
+		if (m_sendAsAction)
+			app->publishAction(m_portId, pv);
+
+		app->publish(pv, m_valueTopic.c_str());
+
 		return;
 	}
 
-	if (!m_waitForChange)
-		return;
+	if (m_needSend)
+	{
+		const char *pv = (m_detectedValue == HIGH) ? "1" : "0";
+		m_needSend = false;
 
-	unsigned long now = millis();
-	if (now - m_lastChangeMillis < m_timeout)
-		return;
+		if (m_sendAsAction)
+			app->publishAction(m_portId, pv);
 
-	int newValue = digitalRead(m_pin);
-	//Serial.printf("val=%d\n", newValue);
-	if (newValue == m_lastValue)
-		return;
-
-	m_lastValue = newValue;
-	m_disable = false;
-	if (m_lastValue != m_detectedValue)
-		m_waitForChange = false;
-
-	char buffer[8];
-	itoa(newValue, buffer, 10);
-	app->publish(buffer, m_valueTopic.c_str());
+		app->publish(pv, m_valueTopic.c_str());
+	}
 }

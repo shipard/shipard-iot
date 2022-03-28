@@ -3,84 +3,10 @@
 #define SHP_SERIAL_DEBUG_ON
 
 
-#ifdef SHP_ETH
-#include <ETH.h>
-#endif
-
-#include <netdb.h>
-#include <lwip/dns.h>
-
-
-#include <HTTPClient.h>
-#include <WiFiType.h>
 
 
 
-
-extern Application *app;
-
-bool Application::eth_connected = false;
-
-
-void WiFiEvent2(system_event_id_t event)
-{
-  switch (event) 
-  {
-		#ifdef SHP_ETH
-    case SYSTEM_EVENT_ETH_START:
-      ETH.setHostname(app->m_deviceId.c_str());
-      break;
-		#endif
-    case SYSTEM_EVENT_ETH_CONNECTED:
-      Serial.println("ETH Connected");
-      break;
-		case SYSTEM_EVENT_STA_CONNECTED:
-      Serial.println("WiFi Connected");
-      break;
-		#ifdef SHP_ETH
-    case SYSTEM_EVENT_ETH_GOT_IP:
-      Serial.print("ETH MAC: ");
-      Serial.print(ETH.macAddress());
-      Serial.print(", IPv4: ");
-      Serial.print(ETH.localIP());
-      if (ETH.fullDuplex()) {
-        Serial.print(", FULL_DUPLEX");
-      }
-      Serial.print(", ");
-      Serial.print(ETH.linkSpeed());
-      Serial.println("Mbps");
-			Application::eth_connected = true;
-      app->IP_Got();
-      break;
-			#endif
-		case SYSTEM_EVENT_STA_GOT_IP:
-		  Serial.print("WiFi MAC: ");
-      Serial.print(WiFi.macAddress());
-			Serial.print(", IPv4: ");
-      Serial.println(WiFi.localIP());
-			Application::eth_connected = true;
-      app->IP_Got();
-			break;
-    case SYSTEM_EVENT_ETH_DISCONNECTED:
-		case SYSTEM_EVENT_STA_LOST_IP:
-      Serial.println("ETH Disconnected");
-      Application::eth_connected = false;
-			app->IP_Lost();
-      break;
-    case SYSTEM_EVENT_ETH_STOP:
-      Serial.println("ETH Stopped");
-      Application::eth_connected = false;
-			app->IP_Lost();
-      break;
-    default:
-      break;
-  }
-}
-
-void mqttCallback(char* topic, byte* payload, unsigned int length) 
-{
-	app->onMqttMessage(topic, payload, length);
-}
+extern SHP_APP_CLASS *app;
 
 
 Application::Application() : 	m_logLevel(shpllStatus),
@@ -88,14 +14,11 @@ Application::Application() : 	m_logLevel(shpllStatus),
 															#ifdef SHP_GSM
 															m_modem (NULL),
 															#endif
-															#ifdef SHP_MQTT
-															mqttClient (NULL),
-															#endif
-															m_networkInfoInitialized(false), 
 															m_boxConfigLoaded(false),
 															m_ioPorts(NULL),
 															m_countIOPorts(0),
-															m_cmdQueueRequests(0)
+															m_cmdQueueRequests(0),
+															m_publishDataOnNextLoop(false)
 {
   //m_pinLed = 33;
 
@@ -114,318 +37,99 @@ void Application::setup()
   Serial.begin(115200);
 	#endif
 
+	JsonObject iotBoxState = m_iotBoxInfo.createNestedObject(IOT_BOX_INFO_VALUES);
+
 	m_prefs.begin("IotBox");
 	m_deviceId = m_prefs.getString("deviceId", "unconfigured-iot-box");
 	m_logLevel = m_prefs.getUChar("logLevel", shpllStatus);
 	m_prefs.end();
 
-	delay(1500); 
+	//delay(1500); 
 
 	if (m_pinLed)
-  	pinMode(m_pinLed,OUTPUT);
+  	pinMode(m_pinLed, OUTPUT);
 
   signalLedOn();
 
 	#ifdef SHP_SERIAL_DEBUG_ON
-	delay(500);
-  Serial.println("fwVer: " SHP_LIBS_VERSION);
+	//delay(500);
+  Serial.println("fwVer: " SHP_LIBS_VERSION " / " SHP_DEVICE_TYPE " / " __DATE__ " " __TIME__);
 	#endif
-
-
-	#ifdef SHP_ETH
-  WiFi.onEvent(WiFiEvent2);
-  ETH.begin();
-	#endif
-
-	#ifdef SHP_WIFI
-	WiFi.begin();
-	wifi_config_t wifiConfig;
-	esp_err_t wifiConfigState = esp_wifi_get_config(ESP_IF_WIFI_STA, &wifiConfig);
-	Serial.printf ("wifiConfigState = %d, ssid=`%s`\n", wifiConfigState, wifiConfig.sta.ssid);
-
-	if (wifiConfig.sta.ssid[0] != 0)
-	{
-		Serial.println("INIT WIFI");
-		WiFi.onEvent(WiFiEvent2);
-	}
-	else
-	{
-		//wifiManager.resetSettings();
-		WiFi.disconnect();
-
-		WiFiManager wifiManager;
-		wifiManager.autoConnect("", "aassddffgg");
-	}
-	#endif
-
-	#ifdef SHP_GSM
-	m_modem = new ShpModemGSM();
-	#endif
-
-	#ifdef SHP_MQTT
-	mqttClient = new PubSubClient();
-  mqttClient->setClient(lanClient);
-  mqttClient->setCallback(mqttCallback);
-	#endif
-}
-
-void Application::IP_Got()
-{
-	m_boxConfigLoaded = false;
-	m_networkInfoInitialized = false;
-	signalLedOff();
-}
-
-void Application::IP_Lost()
-{
-	signalLedOn();
 }
 
 boolean Application::publish(const char *payload, const char *topic /* = NULL */)
 {
-	#ifdef SHP_MQTT
-	if (eth_connected && mqttClient->connected())
-	{
-		boolean res = false;
-		
-		if (topic)
-			res = mqttClient->publish(topic, payload);
-
-		if (!res)
-		{
-			//Serial.println("PUBLISH FAILED!!!");
-			checkMqtt();
-			res = mqttClient->publish(topic, payload);
-		}
-
-    return res;
-	}
-	#endif
 	return false;
+}
+
+void Application::publishData(uint8_t sendMode)
+{
+}
+
+void Application::setValue(const char *key, const char *value, uint8_t sendMode)
+{
+	JsonObject iotBoxState = m_iotBoxInfo[IOT_BOX_INFO_VALUES];
+	iotBoxState[key] = value;
+	publishData(sendMode);
+}
+
+void Application::setValue(const char *key, const int value, uint8_t sendMode)
+{
+	JsonObject iotBoxState = m_iotBoxInfo[IOT_BOX_INFO_VALUES];
+	iotBoxState[key] = value;
+	publishData(sendMode);
+}
+
+void Application::setValue(const char *key, const float value, uint8_t sendMode)
+{
+	JsonObject iotBoxState = m_iotBoxInfo[IOT_BOX_INFO_VALUES];
+	iotBoxState[key] = value;
+	publishData(sendMode);
+}
+
+void Application::publishAction(const char *key, const char *value)
+{
+	String payload;
+	StaticJsonDocument<200> doc;
+	doc[key] = value;
+	serializeJson(doc, payload);
+
+	publish(payload.c_str(), m_deviceTopic.c_str());
+	setValue(key, value, SM_NONE);
+}
+
+void Application::publishAction(const char *key, const int value)
+{
+	String payload;
+	StaticJsonDocument<200> doc;
+	doc[key] = value;
+	serializeJson(doc, payload);
+
+	publish(payload.c_str(), m_deviceTopic.c_str());
+	setValue(key, value, SM_NONE);
+}
+
+void Application::publishAction(const char *key, const float value)
+{
+	String payload;
+	StaticJsonDocument<200> doc;
+	doc[key] = value;
+	serializeJson(doc, payload);
+
+	publish(payload.c_str(), m_deviceTopic.c_str());
+	setValue(key, value, SM_NONE);
 }
 
 void Application::checks()
 {
-	if (!eth_connected)
-		return;
-
-	if (!m_networkInfoInitialized)
-	{
-		initNetworkInfo();
-		return;
-	}
-
-	if (!m_boxConfigLoaded)
-	{
-		loadBoxConfig();
-		return;
-	}
-
-	#ifdef SHP_MQTT
-	checkMqtt();
-	#endif
-}
-
-#ifdef SHP_MQTT
-void Application::checkMqtt()
-{
-  if (!mqttClient || mqttClient->connected())
-		return;
-
-	mqttClient->setServer(mqttServerHostName.c_str(), 1883);
-	//Serial.println("[MQTT] connect to server!");
-
-	/*
-	String id = (const char*)m_boxConfig["deviceId"];
-	id.concat (millis());
-	id.concat(rand());
-	*/
-
-	mqttClient->connect((const char*)m_boxConfig["deviceId"]/*id.c_str()*/, m_logTopic.c_str()/*"shp/iot-boxes-disconnect"*/, 0, 1, /*(const char*)m_boxConfig["deviceId"]*/"disconnect");
-	
-	if (!mqttClient->connected())
-	{
-		signalLedBlink(5);
-		sleep(100);
-		return;
-	}
-
-	mqttClient->subscribe(m_deviceSubTopic.c_str());
-
-	log (shpllStatus, "device connected to MQTTT server; deviceNdx=%d, fwVersion=%s, logLevel=%d, freeMem=%ld, sdkVer=%s", (int)m_boxConfig["deviceNdx"], SHP_LIBS_VERSION, m_logLevel, ESP.getFreeHeap(), ESP.getSdkVersion());
-
-	iotBoxInfo();
-	//log (shpllStatus, "device connected to MQTTT server; deviceNdx=%d, fwVersion=%s, logLevel=%d", (int)m_boxConfig["deviceNdx"], SHP_LIBS_VERSION, m_logLevel);
-}
-#endif
-
-void Application::initNetworkInfo()
-{
-	m_networkInfoInitialized = true;
 }
 
 void Application::loadBoxConfig()
 {
-	// -- PREPARE CFG SERVER HOST NAME
-	if (cfgServerHostName == "")
-	{
-		#ifdef SHP_ETH
-		ipLocal = ETH.localIP();
-		macHostName = ETH.macAddress();
-		#endif
-
-		#ifdef SHP_WIFI
-		ipLocal = WiFi.localIP();
-		macHostName = WiFi.macAddress();
-		#endif
-
-		macHostName.replace(':', '-');
-		macHostName.toLowerCase();
-
-		cfgServerHostName = "";
-
-		char testSrvName[64];
-		struct addrinfo* result;
-		int error;
-
-		sprintf(testSrvName, "shp-iot-cfg-server-%d-%d-%d", ipLocal[0], ipLocal[1], ipLocal[2]);
-		error = getaddrinfo(testSrvName, NULL, NULL, &result);
-		if(error == 0)
-		{
-			cfgServerHostName = testSrvName;
-			freeaddrinfo(result);
-		}
-		else
-		{
-			strcpy(testSrvName, "shp-iot-cfg-server");
-			error = getaddrinfo(testSrvName, NULL, NULL, &result);
-			if(error == 0)
-			{
-				cfgServerHostName = testSrvName;
-				freeaddrinfo(result);
-			}
-			else
-			{
-				IPAddress cfgSrv = ipLocal;//ETH.localIP();
-				cfgSrv[3] = 2;
-				cfgServerHostName = cfgSrv.toString();
-			}		
-		}
-
-		Serial.print("cfgServerHostName: ");
-		Serial.println(cfgServerHostName);
-	}
-
-	// -- LOAD CFG FROM SERVER
-  String url = "http://" + cfgServerHostName + "/cfg/" + macHostName + ".json";
-  Serial.println("========== CFG URL: "+url);
-
-  String data;
-
-  WiFiClient client;
-  HTTPClient http;
-
-  Serial.print("[HTTP] begin");
-	http.setTimeout(5);
-  if (http.begin(client, url)) 
-  {
-    Serial.print("[HTTP] GET...");
-    int httpCode = http.GET();
-
-    if (httpCode > 0)
-    {
-      Serial.printf("[HTTP] GET... code: %d", httpCode);
-
-      if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY)
-      {
-        data = http.getString();
-      } 
-      else 
-      {
-        Serial.printf("[HTTP] GET... failed, error: %s", http.errorToString(httpCode).c_str());
-      }
-    } 
-    else 
-    {
-      Serial.printf("[HTTP] Unable to connect");
-    }
-    http.end();
-
-    Serial.println(data);
-
-    if (data.length())
-    {
-      DeserializationError error = deserializeJson(m_boxConfig, data.c_str());
-      if (error) 
-      {
-        Serial.print(F("deserializeJson() failed: "));
-        Serial.println(error.c_str());
-        m_boxConfig.clear();
-      }
-			else
-			{
-				m_boxConfigLoaded = true;
-
-				if (strcmp((const char*)m_boxConfig["deviceId"], m_deviceId.c_str()) != 0)
-				{
-					m_deviceId = (const char*)m_boxConfig["deviceId"];
-					m_prefs.begin("IotBox");
-					m_deviceId = m_prefs.putString("deviceId", m_deviceId);
-					m_prefs.end();
-				}
-
-				mqttServerHostName = cfgServerHostName;
-				m_deviceSubTopic = MQTT_TOPIC_THIS_DEVICE"/";
-				m_deviceSubTopic.concat((const char*)m_boxConfig["deviceId"]);
-				m_deviceSubTopic.concat("/#");
-
-				m_logTopic = MQTT_TOPIC_DEVICES_LOG_BEGIN;
-				m_logTopic.concat ((const char*)m_boxConfig["deviceId"]);
-
-				init();
-
-				return;
-			}
-    }
-  }
-	
-	cfgServerHostName = "";
-	signalLedBlink(3);
-	sleep(10);
 }
 
 void Application::init()
 {
-	m_prefs.begin("IotBox");
-	bool doUpgrade = m_prefs.getBool("doUpgrade", false);
-	int fwLength = m_prefs.getInt("fwLength", 0);
-	String fwUrl = m_prefs.getString("fwUrl", "");
-	m_prefs.end();
-
-	if (doUpgrade)
-	{
-		//Serial.println("**** doFwUpgradeRun ****");
-		log(shpllStatus, "[OTA UPGRADE] upgrade start: %d bytes from URL `%s`", fwLength, fwUrl.c_str());
-		ShpOTAUpdate *ota = new ShpOTAUpdate();
-		ota->doFwUpgradeRun(fwLength, fwUrl);
-		delete ota;
-
-		return;
-	}
-
-	// -- wait for mqtt client
-	#ifdef SHP_MQTT
-	int tryCount = 0;
-	while (tryCount < 10)
-	{
-		checkMqtt();
-		if (mqttClient->connected())
-			break;
-		delay(200);
-		tryCount++;	
-	}
-	#endif
-
 	initIOPorts();
 	init2IOPorts();
 }
@@ -446,71 +150,77 @@ void Application::initIOPorts()
 		}
 
 		ShpIOPort *newPort = NULL;
-		if (strcmp(portType, "controlBinary") == 0)
+		if (strcmp(portType, "control/binary") == 0)
 			newPort = new ShpControlBinary();
 		#ifdef SHP_CONTROL_LEDSTRIP_H	
-		else if (strcmp(portType, "controlLedStrip") == 0)
+		else if (strcmp(portType, "control/led-strip") == 0)
 			newPort = new ShpControlLedStrip();
 		#endif	
 		#ifdef SHP_CONTROL_LEVEL_H	
-		else if (strcmp(portType, "controlLevel") == 0)
+		else if (strcmp(portType, "control/level") == 0)
 			newPort = new ShpControlLevel();
 		#endif	
 		#ifdef SHP_CONTROL_HBRIDGE_H	
 		else if (strcmp(portType, "controlHBridge") == 0)
 			newPort = new ShpControlHBridge();
-		#endif	
-		else if (strcmp(portType, "inputAnalog") == 0)
+		#endif
+		else if (strcmp(portType, "input/analog") == 0)
 			newPort = new ShpInputAnalog();
-		else if (strcmp(portType, "inputBinary") == 0)
+		else if (strcmp(portType, "input/binary") == 0)
 			newPort = new ShpInputBinary();
-		else if (strcmp(portType, "inputCounter") == 0)
+		else if (strcmp(portType, "input/counter") == 0)
 			newPort = new ShpInputCounter();
 		#ifdef SHP_SENSOR_DISTANCE_US_H
 		else if (strcmp(portType, "sensorDistanceUS") == 0)
 			newPort = new ShpSensorDistanceUS();
 		#endif	
-		else if (strcmp(portType, "dataSerial") == 0)
+		else if (strcmp(portType, "data/serial") == 0)
 			newPort = new ShpDataSerial();
-		else if (strcmp(portType, "dataOneWire") == 0)
+		else if (strcmp(portType, "bus/1wire") == 0)
 			newPort = new ShpDataOneWire();
 		#ifdef SHP_DATA_WIEGAND_H	
-		else if (strcmp(portType, "dataWiegand") == 0)
+		else if (strcmp(portType, "data/wiegand") == 0)
 			newPort = new ShpDataWiegand();
 		#endif	
 		#ifdef SHP_DATA_RFIDPN532_H
-		else if (strcmp(portType, "dataRFIDPN532") == 0)
+		else if (strcmp(portType, "rfid/pn532") == 0)
 			newPort = new ShpDataRFIDPN532();
 		#endif	
 		#ifdef SHP_MOD_RFID_1356_MIFARE_H
-		else if (strcmp(portType, "dataRFIDMOD1356MIFARE") == 0)
+		else if (strcmp(portType, "rfid/oli-mod1356-mif") == 0)
 			newPort = new ShpMODRfid1356Mifare();
 		#endif	
 		#ifdef SHP_DATA_RFIDPN125KHZ_H
-		else if (strcmp(portType, "dataRFID125kHz") == 0)		                           
+		else if (strcmp(portType, "rfid/125kHz") == 0)		                           
 			newPort = new ShpDataRFID125KHZ();
 		#endif
 		#ifdef SHP_DATA_GSM_H
-		else if (strcmp(portType, "dataGSM") == 0)
+		else if (strcmp(portType, "signal/gsm") == 0)
 			newPort = new ShpDataGSM();
 		#endif
 		#ifdef SHP_DISPLAY_NEXTION_H
-		else if (strcmp(portType, "displayNextion") == 0)
+		else if (strcmp(portType, "display/nextion") == 0)
 			newPort = new ShpDisplayNextion();
 		#endif	
-		else if (strcmp(portType, "busI2C") == 0)
+		else if (strcmp(portType, "bus/i2c") == 0)
 			newPort = new ShpBusI2C();
-		#ifdef SHP_GPIO_EXPANDER_I2C_H	
-		else if (strcmp(portType, "gpioExpanderI2C") == 0)
+		#ifdef SHP_GPIO_EXPANDER_I2C_H
+		else if (strcmp(portType, "gpio-expander/i2c") == 0)
 			newPort = new ShpGpioExpanderI2C();
 		#endif
+		#ifdef SHP_METEO_DHT_US_H
 		else if (strcmp(portType, "meteoDHT") == 0)
 			newPort = new ShpMeteoDHT();
-		else if (strcmp(portType, "meteoBME280") == 0)
+		#endif	
+		else if (strcmp(portType, "sensor/meteo-bme280") == 0)
 			newPort = new ShpMeteoBME280();
 		else if (strcmp(portType, "meteoBH1750") == 0)
 			newPort = new ShpMeteoBH1750();
-		
+		#ifdef SHP_NETWORKS_ESPNOW_SERVER_H
+		else if (strcmp(portType, "networks/esp-now-server") == 0)
+			newPort = new ShpEspNowServerIOPort();
+		#endif
+
 		if (newPort == NULL)
 			continue;
 
@@ -528,57 +238,34 @@ void Application::init2IOPorts()
 
 void Application::addIOPort(ShpIOPort *ioPort, JsonVariant portCfg)
 {
-	//Serial.println ((const char*)portCfg["type"]);
-
 	ioPort->init(portCfg);
 	m_ioPorts[m_countIOPorts] = ioPort;
 	m_countIOPorts++;
 }
 
-void Application::onMqttMessage(const char* topic, byte* payload, unsigned int length)
+void Application::doSet(byte* payload, unsigned int length)
 {
-	char *portId = strrchr(topic, '/');
-	if (portId == NULL)
+	StaticJsonDocument<4096> data;
+	DeserializationError error = deserializeJson(data, payload, length);
+	if (error) 
 	{
+		Serial.print(F("deserializeJson() failed: "));
+		Serial.println(error.c_str());
 		return;
 	}
-
-	portId++;
-
-	// -- cmd:commandID
-	if (portId[0] == 'c' && portId[1] == 'm' && portId[2] == 'd' && portId[3] == ':')
+	JsonObject documentRoot = data.as<JsonObject>();
+	//JsonObject setItems = data["set"];
+	//for (JsonPair oneItem: setItems)
+	for (JsonPair oneItem: documentRoot)
 	{
-		char *commandId = strrchr(portId, ':');
-		if (commandId == NULL || commandId[1] == 0)
+		ShpIOPort* iop = ioPort(oneItem.key().c_str());
+		if (!iop)
 		{
-			return;
+			continue;
 		}
-
-		commandId++;
-
-		Serial.printf("command is `%s`\n", commandId);
-
-		addCmdQueueItemFromMessage(commandId, payload, length);
-
-		return;
-	}
-
-	char *subCmd = strchr(portId, ':');
-	if (subCmd)
-	{
-		subCmd[0] = 0;
-		subCmd++;
-	}
-
-	// -- ioPort event
-	ShpIOPort *dstIOPort = ioPort(portId);
-	if (dstIOPort == NULL)
-	{
-		log(shpllError, "Unknown portId `%s`", portId);
-		return;
-	}
-
-	dstIOPort->onMessage(topic, subCmd, payload, length);
+		const char *value = oneItem.value().as<char*>();
+		iop->onMessage("", "", (byte*)value, strlen(value));
+	}	
 }
 
 void Application::addCmdQueueItemFromMessage(const char* commandId, byte* payload, unsigned int length)
@@ -657,8 +344,10 @@ void Application::runCmdQueueItem(int i)
 
 	if (strcmp(m_cmdQueue[i].commandId.c_str(), "fwUpgrade") == 0)
 	{
+		#ifdef SHP_OTA_UPDATE_H
 		ShpOTAUpdate ota;
 		ota.doFwUpgradeRequest(m_cmdQueue[i].payload);
+		#endif
 	}
 	else if (strcmp(m_cmdQueue[i].commandId.c_str(), "reboot") == 0)
 	{
@@ -718,6 +407,7 @@ void Application::log(uint8_t level, const char* format, ...)
 
 void Application::log(const char *msg, uint8_t level)
 {
+	/*
 	#ifdef SHP_MQTT
 	if (mqttClient)
 	{
@@ -728,6 +418,12 @@ void Application::log(const char *msg, uint8_t level)
 		}
 	}
 	#endif
+	*/
+
+	if (m_logLevel >= level)
+	{
+		publish(msg, m_logTopic.c_str());
+	}
 
 	#ifdef SHP_SERIAL_DEBUG_ON
 	Serial.println(msg);
@@ -741,6 +437,7 @@ void Application::iotBoxInfo()
 	info.concat("\"device\": "); info.concat((int)m_boxConfig["deviceNdx"]); info.concat(",");
 	info.concat("\"type\": \"system\",");
 	info.concat("\"items\":{");
+		//info.concat("\"device-id\": \"" + m_deviceId + "\",");
 		info.concat("\"device-type\": \"" SHP_DEVICE_TYPE "\",");
 		info.concat("\"version-fw\": \"" SHP_LIBS_VERSION "\",");
 		info.concat("\"version-os\": \""); info.concat(ESP.getSdkVersion()); info.concat("\",");
@@ -751,12 +448,47 @@ void Application::iotBoxInfo()
 	publish(info.c_str(), MQTT_TOPIC_DEVICES_INFO);
 }
 
+void Application::setIotBoxCfg(String data)
+{
+	DeserializationError error = deserializeJson(m_boxConfig, data.c_str());
+	if (error) 
+	{
+		Serial.print(F("deserializeJson() failed: "));
+		Serial.println(error.c_str());
+		m_boxConfig.clear();
+	}
+	else
+	{
+		m_boxConfigLoaded = true;
+
+		if (strcmp((const char*)m_boxConfig["deviceId"], m_deviceId.c_str()) != 0)
+		{
+			m_deviceId = (const char*)m_boxConfig["deviceId"];
+			m_prefs.begin("IotBox");
+			m_deviceId = m_prefs.putString("deviceId", m_deviceId);
+			m_prefs.end();
+		}
+
+		mqttServerHostName = cfgServerHostName;
+
+		m_deviceTopic = MQTT_TOPIC_THIS_DEVICE"/";
+		m_deviceTopic.concat((const char*)m_boxConfig["deviceId"]);
+
+		m_deviceSubTopic = MQTT_TOPIC_THIS_DEVICE"/";
+		m_deviceSubTopic.concat((const char*)m_boxConfig["deviceId"]);
+		m_deviceSubTopic.concat("/#");
+
+		m_logTopic = MQTT_TOPIC_DEVICES_LOG_BEGIN;
+		m_logTopic.concat ((const char*)m_boxConfig["deviceId"]);
+
+		init();
+
+		return;
+	}
+}
+
 void Application::loop()
 {
-	#ifdef SHP_MQTT
-  mqttClient->loop();
-	#endif
-
   this->checks();
 
 	// -- io ports
@@ -781,5 +513,11 @@ void Application::loop()
 
 			break;
 		}
+	}
+
+	if (m_publishDataOnNextLoop)
+	{
+		m_publishDataOnNextLoop = false;
+		publishData(SM_NOW);
 	}
 }

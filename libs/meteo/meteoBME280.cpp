@@ -1,4 +1,4 @@
-extern Application *app;
+extern SHP_APP_CLASS *app;
 
 ShpMeteoBME280::ShpMeteoBME280() : 
 																	m_address(-1),
@@ -114,12 +114,12 @@ void ShpMeteoBME280::loop()
 	sprintf(b, "%.1f", m_pressure);
 	app->publish(b, m_topicPressure.c_str());
 
-	/*
-	Serial.println("BME280:");
+	
+	Serial.printf("BME280 (%ld):\n", millis());
 	Serial.println(m_temperature);
 	Serial.println(m_humidity);
 	Serial.println(m_pressure);
-	*/
+	
 
 	m_nextMeasure = now + m_measureInterval;
 }

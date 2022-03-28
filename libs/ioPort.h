@@ -25,6 +25,9 @@ class ShpIOPort {
 		bool m_valid;
 		bool m_paused;
 		unsigned long m_pausedTo;
+		
+		uint8_t m_sendMode;
+		uint8_t m_sendAsAction;
 };
 
 

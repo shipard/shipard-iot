@@ -1,22 +1,18 @@
 #define SHP_SERIAL_DEBUG_ON
-#define SHP_MQTT
-#define SHP_NETWORK_LAN
-#define SHP_APP_CLASS ApplicationLan
+#define SHP_NETWORK_ESP_NOW
+#define SHP_APP_CLASS ApplicationDSEN
 #define DEBUG 1
 
 #include <Arduino.h>
 
 #include <FunctionalInterrupt.h>
 
-#ifdef ESP32
-#include <HTTPClient.h>
-#endif
-#ifdef ESP8266
-ESP8266HTTPClient.h
-#endif
 
-#include <PubSubClient.h>
+//#include <HTTPClient.h>
+
+//#include <PubSubClient.h>
 #include <ArduinoJson.h>
+
 #ifdef ESP32
 #include <Preferences.h>
 #include <WebServer.h>
@@ -29,8 +25,8 @@ ESP8266HTTPClient.h
 #include <Updater.h>
 #endif
 
-
-#include <DNSServer.h>
+//#include <WebServer.h>
+//#include <DNSServer.h>
 
 #include <OneWire.h>
 #include <DallasTemperature.h>
@@ -50,10 +46,10 @@ ESP8266HTTPClient.h
 #include <Wire.h>
 
 #include <bootstrap.h>
-#include <applicationLan.h>
+#include <applicationDSEN.h>
 
 
-ApplicationLan *app = new ApplicationLan();
+ApplicationDSEN *app = new ApplicationDSEN();
 
 void setup()
 {
@@ -61,10 +57,10 @@ void setup()
 }
 
 void loop()
-{
+{  
   app->loop();
 }
 
 
 #include <bootstrap.cpp>
-#include <applicationLan.cpp>
+#include <applicationDSEN.cpp>

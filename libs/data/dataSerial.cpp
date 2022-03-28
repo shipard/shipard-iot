@@ -1,4 +1,4 @@
-extern Application *app;
+extern SHP_APP_CLASS *app;
 
 
 int g_cntUarts = 1;
@@ -10,8 +10,10 @@ ShpDataSerial::ShpDataSerial() :
 																m_rxPin(-1), 
 																m_txPin(-1),
 																m_telnetPort(0),
-																m_hwSerial(NULL),
-																m_telnet(NULL)
+																m_hwSerial(NULL)
+																#ifdef SHP_LIB_TELNET_H
+																, m_telnet(NULL)
+																#endif
 {
 }
 
@@ -69,13 +71,15 @@ void ShpDataSerial::init(JsonVariant portCfg)
 	m_hwSerial = new HardwareSerial(g_cntUarts++);
 	m_hwSerial->begin(m_speed, m_mode, m_rxPin, m_txPin);
 
+	#ifdef SHP_LIB_TELNET_H
 	if (portCfg.containsKey("useTelnet") && portCfg["useTelnet"] == 1)
 	{
 		m_telnetPort = (int)(portCfg["telnetPort"]);
 		if (!m_telnetPort)
 			m_telnetPort = 5000 + g_cntUarts - 1;
 		m_telnet = new ShpTelnet(m_telnetPort);
-	}	
+	}
+	#endif
 }
 
 void ShpDataSerial::loop()
@@ -83,12 +87,14 @@ void ShpDataSerial::loop()
 	if (!m_hwSerial)
 		return;
 
+	#ifdef SHP_LIB_TELNET_H
 	if (m_telnet)
 	{
 		m_telnet->loop(m_hwSerial, m_hwSerial);
 		ShpIOPort::loop();
 		return;
 	}
+	#endif
 
 	while (m_hwSerial->available()) 
 	{

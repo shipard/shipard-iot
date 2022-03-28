@@ -84,6 +84,8 @@ class BuildApp
 		$this->buildCommit = shell_exec("git log --pretty=format:'%h' -n 1");
 
 		$this->buildVersionId = $this->libCfg['version'].'-'.$this->buildCommit;
+		if (1)
+			$this->buildVersionId .= '-'.base_convert((time() - 1600000000), 10, 36);
 
 		file_put_contents('../libs/versionId.h', "#define SHP_LIBS_VERSION \"{$this->buildVersionId}\"\n");
 
@@ -262,17 +264,29 @@ class BuildApp
 		$doUpload = $this->arg('upload');
 		if ($doUpload === TRUE)
 			$this->upload();
-
+		$doUploadLocal = $this->arg('upload-local');
+		if ($doUploadLocal === TRUE)
+			$this->upload(TRUE);
+	
 		return TRUE;
 	}
 
-	function upload()
+	function upload($local = FALSE)
 	{
-		echo "--- UPLOAD ---\n";
-		$remoteUser = $this->localCfg['remoteUser'];
-		$remoteServer = $this->localCfg['remoteServer'];
-		$remoteDir = '/var/www/webs/download.shipard.org/shipard-iot/fw/ib/'.$this->buildChannel;
-
+		if ($local)
+		{
+			echo "--- UPLOAD LOCAL ---\n";
+			$remoteUser = $this->localCfg['remoteUserLocal'];
+			$remoteServer = $this->localCfg['remoteServerLocal'];
+			$remoteDir = '/var/www/iot-boxes/fw/ib/local';//.$this->buildChannel;
+		}
+		else
+		{
+			echo "--- UPLOAD ---\n";
+			$remoteUser = $this->localCfg['remoteUser'];
+			$remoteServer = $this->localCfg['remoteServer'];
+			$remoteDir = '/var/www/webs/download.shipard.org/shipard-iot/fw/ib/'.$this->buildChannel;
+		}
 		foreach ($this->projectsCfg['projects'] as $projectId => $projectCfg)
 		{
 			$versionId = $this->buildVersionId;

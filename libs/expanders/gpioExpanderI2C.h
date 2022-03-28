@@ -24,6 +24,8 @@ class ShpGpioExpanderI2C : public ShpGpioExpander
 		void write(uint16_t data);
 		void write2B(uint8_t data1, uint8_t data2);
 
+		void readDigitalInput();
+
 	private:
 		
 		uint8_t m_expType;
@@ -31,6 +33,9 @@ class ShpGpioExpanderI2C : public ShpGpioExpander
 		ShpBusI2C *m_bus;
 		int m_address;
 		uint16_t m_bits;
+
+		uint16_t m_inputBits;
+		unsigned long m_nextDigitalInputRead;
 
 };
 

@@ -32,7 +32,9 @@ class ShpDataSerial : public ShpIOPort
 		int m_telnetPort;
 
 		HardwareSerial *m_hwSerial;
+		#ifdef SHP_LIB_TELNET_H
 		ShpTelnet *m_telnet;
+		#endif
 
 		char m_buffer[MAX_DATA_SERIAL_BUF_LEN];
 		int m_sbCnt;
