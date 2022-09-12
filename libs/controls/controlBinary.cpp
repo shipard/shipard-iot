@@ -1,7 +1,7 @@
 extern SHP_APP_CLASS *app;
 
 
-ShpControlBinary::ShpControlBinary() : 
+ShpControlBinary::ShpControlBinary() :
 																				m_pin(-1),
 																				m_reverse(false),
 																				m_pinExpPortId(NULL),
@@ -94,8 +94,9 @@ void ShpControlBinary::addQueueItemFromMessage(const char* topic, byte* payload,
 	 * "0" -> OFF
 	 * "1" -> ON
 	 * "!" -> switch current value
-	 * "P<msecs>": press button -> P1000 
-	 * "F[D<msecs>]|[R<repeatCount>]:<durationOn:DurationOff,...>": flash -> 100:300
+	 * "P<msecs>": press button -> P1000
+	 * "U<msecs>": unpress button -> U1000
+	 * "F[D<msecs>]|[R<repeatCount>]:<durationOn:DurationOff,...>": flash -> FR10:100:300
 	 */
 
 	String payloadStr;
@@ -120,17 +121,17 @@ void ShpControlBinary::addQueueItemFromMessage(const char* topic, byte* payload,
 		pinState = (m_PinStateCurrent == m_PinStateOff) ? m_PinStateOn : m_PinStateOff;
 		valid = 1;
 	}
-	else if (payloadStr.charAt(0) == 'P')
+	else if (payloadStr.charAt(0) == 'P' || payloadStr.charAt(0) == 'U')
 	{
 		char *err;
 		long duration = strtol(payloadStr.c_str() + 1, &err, 10);
-		if (*err) 
+		if (*err)
 		{
 			return;
 		}
 		else
 		{
-			addQueueItemPressButton(duration, 1);
+			addQueueItemPressButton(duration, 1, payloadStr.charAt(0) == 'U');
 			return;
 		}
 	}
@@ -143,7 +144,7 @@ void ShpControlBinary::addQueueItemFromMessage(const char* topic, byte* payload,
 
 		char *oneItem = NULL;
 		int paramNdx = 0;
-		
+
   	oneItem = strtok(payloadStr.begin(), ":");
 		while (oneItem != NULL && paramNdx < BINARY_CONTROL_SCENARIO_LEN)
 		{
@@ -153,10 +154,10 @@ void ShpControlBinary::addQueueItemFromMessage(const char* topic, byte* payload,
 				{
 					char *err;
 					long number = strtol(oneItem + 2, &err, 10);
-					if (*err) 
+					if (*err)
 					{
 
-						return;	
+						return;
 					}
 					else
 					{
@@ -165,10 +166,10 @@ void ShpControlBinary::addQueueItemFromMessage(const char* topic, byte* payload,
 						else if (payloadStr.charAt(1) == 'D')
 						{
 							totalDuration = number;
-						}	
+						}
 						else
 						{
-							return;						
+							return;
 						}
 					}
 				}
@@ -177,10 +178,10 @@ void ShpControlBinary::addQueueItemFromMessage(const char* topic, byte* payload,
 			{
 				char *err;
 				long number = strtol(oneItem, &err, 10);
-				if (*err) 
+				if (*err)
 				{
 
-					return;	
+					return;
 				}
 				else
 				{
@@ -217,18 +218,18 @@ void ShpControlBinary::addQueueItem(int8_t pinState, unsigned long startAfter)
 			continue;
 
 		m_queue[i].qState = qsLocked;
-		m_queue[i].qType = qbcitSetValue;	
+		m_queue[i].qType = qbcitSetValue;
 		m_queue[i].pinState = pinState;
 		m_queue[i].startAfter = millis() + startAfter;
 
-		m_queue[i].qState = qsDoIt;	
+		m_queue[i].qState = qsDoIt;
 		m_queueRequests++;
 
 		break;
 	}
 }
 
-void ShpControlBinary::addQueueItemPressButton(int duration, unsigned long startAfter)
+void ShpControlBinary::addQueueItemPressButton(int duration, unsigned long startAfter, bool unpush)
 {
 	for (int i = 0; i < SWITCH_CONTROL_QUEUE_LEN; i++)
 	{
@@ -239,9 +240,19 @@ void ShpControlBinary::addQueueItemPressButton(int duration, unsigned long start
 		m_queue[i].qType = qbcitScenario;
 		m_queue[i].startAfter = millis() + startAfter;
 
-		m_queue[i].scenario[0].pinState = m_PinStateOn;
+		if (unpush)
+		{
+			m_queue[i].scenario[0].pinState = m_PinStateOff;
+			m_queue[i].scenario[1].pinState = m_PinStateOn;
+			m_queue[i].endScenarioPinState = m_PinStateOn;
+		}
+		else
+		{
+			m_queue[i].scenario[0].pinState = m_PinStateOn;
+			m_queue[i].scenario[1].pinState = m_PinStateOff;
+			m_queue[i].endScenarioPinState = m_PinStateOff;
+		}
 		m_queue[i].scenario[0].duration = duration;
-		m_queue[i].scenario[1].pinState = m_PinStateOff;
 		m_queue[i].scenario[1].duration = 0;
 
 		m_queue[i].scenarioLen = 2;
@@ -251,7 +262,7 @@ void ShpControlBinary::addQueueItemPressButton(int duration, unsigned long start
 		m_queue[i].scenarioRepeatPos = 0;
 		m_queue[i].scenarioDurationExpire =  0;
 
-		m_queue[i].qState = qsDoIt;	
+		m_queue[i].qState = qsDoIt;
 		m_queueRequests++;
 
 		break;
@@ -267,6 +278,7 @@ void ShpControlBinary::addQueueItemFlash(int durations[], int durationsCnt, int 
 
 		m_queue[i].qState = qsLocked;
 		m_queue[i].qType = qbcitScenario;
+		m_queue[i].endScenarioPinState = m_PinStateOff;
 		//m_queue[i].pinState = pinState;
 		m_queue[i].startAfter = millis() + startAfter;
 
@@ -280,14 +292,14 @@ void ShpControlBinary::addQueueItemFlash(int durations[], int durationsCnt, int 
 
 		m_queue[i].scenarioRepeatCount = repeatCnt;
 		m_queue[i].scenarioRepeatPos = 0;
-		
+
 		m_queue[i].scenarioDurationExpire = 0;
 		if (totalDuration)
 		{
 			m_queue[i].scenarioDurationExpire = m_queue[i].startAfter + totalDuration;
 		}
 
-		m_queue[i].qState = qsDoIt;	
+		m_queue[i].qState = qsDoIt;
 		m_queueRequests++;
 
 		break;
@@ -300,11 +312,11 @@ void ShpControlBinary::runQueueItem(int i)
 	{
 		m_queueRequests--;
 		//Serial.printf ("Set value %d on pin %d\n", m_queue[i].pinState, m_pin);
-		
+
 		setPinState(m_queue[i].pinState);
-		
+
 		m_PinStateCurrent = m_queue[i].pinState;
-		
+
 		m_queue[i].qState = qsFree;
 	}
 	else
@@ -314,7 +326,7 @@ void ShpControlBinary::runQueueItem(int i)
 
 		setPinState(m_queue[i].scenario[m_queue[i].scenarioPos].pinState);
 		m_PinStateCurrent = m_queue[i].scenario[m_queue[i].scenarioPos].pinState;
-		
+
 		m_queue[i].scenarioPos++;
 		if (m_queue[i].scenarioPos == m_queue[i].scenarioLen)
 		{
@@ -342,8 +354,9 @@ void ShpControlBinary::runQueueItem(int i)
 					return;
 				}
 			}
-		
-			setPinState(m_PinStateOff);
+
+			//setPinState(m_PinStateOff);
+			setPinState(m_queue[i].endScenarioPinState);
 
 			m_queueRequests--;
 			m_queue[i].qState = qsFree;
@@ -392,7 +405,7 @@ void ShpControlBinary::loop()
 	{
 		if (m_queue[i].qState != qsDoIt)
 			continue;
-		
+
 		if (m_queue[i].startAfter > now)
 			continue;
 
@@ -400,6 +413,6 @@ void ShpControlBinary::loop()
 		runQueueItem(i);
 
 		break;
-	}	
+	}
 }
 

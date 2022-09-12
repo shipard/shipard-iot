@@ -14,7 +14,7 @@
 #define qbcitScenario 1
 
 
-class ShpControlBinary : public ShpIOPort 
+class ShpControlBinary : public ShpIOPort
 {
 	public:
 
@@ -54,6 +54,7 @@ class ShpControlBinary : public ShpIOPort
 			QueueScenarioItem scenario[BINARY_CONTROL_SCENARIO_LEN];
 			int8_t scenarioLen;
 			int8_t scenarioPos;
+			int8_t endScenarioPinState;
 
 			int scenarioDurationLen;
 			unsigned long scenarioDurationExpire;
@@ -68,7 +69,7 @@ class ShpControlBinary : public ShpIOPort
 		void setPinState(uint8_t value);
 
 		void addQueueItemFromMessage(const char* topic, byte* payload, unsigned int length);
-		void addQueueItemPressButton(int duration, unsigned long startAfter);
+		void addQueueItemPressButton(int duration, unsigned long startAfter, bool unpush);
 		void addQueueItemFlash(int durations[], int durationsCnt, int repeatCnt, int totalDuration, unsigned long startAfter);
 
 		void addQueueItem(int8_t pinState, unsigned long startAfter);
