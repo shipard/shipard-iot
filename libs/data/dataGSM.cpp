@@ -4,16 +4,16 @@ extern SHP_APP_CLASS *app;
 extern int g_cntUarts;
 
 
-ShpDataGSM::ShpDataGSM() : 
+ShpDataGSM::ShpDataGSM() :
 														m_speed(-1),
 														m_mode(0),
-														m_rxPin(-1), 
+														m_rxPin(-1),
 														m_txPin(-1),
-														m_incomingCallMaxRings(5),
+														m_incomingCallMaxRings(8),
 														m_outgoingCallMaxSecs(60),
-														m_checkInterval(1000),
+														m_checkInterval(250),
 														m_nextCheck(0),
-														m_checkModuleInterval(60*1000),
+														m_checkModuleInterval(120*1000),
 														m_nextModuleCheck(0),
 														m_hwSerial(NULL),
 														m_moduleInitialized(false),
@@ -51,7 +51,7 @@ void ShpDataGSM::init(JsonVariant portCfg)
 	int speed = -1;
 	if (portCfg["speed"] != nullptr)
 		speed = portCfg["speed"];
-	if (speed < 0 || speed >= SERIAL_SPEED_MAP_CNT)	
+	if (speed < 0 || speed >= SERIAL_SPEED_MAP_CNT)
 		return;
 	m_speed = SERIAL_SPEED_MAP[speed];
 
@@ -59,7 +59,7 @@ void ShpDataGSM::init(JsonVariant portCfg)
 	int mode = -1;
 	if (portCfg["mode"] != nullptr)
 		mode = portCfg["mode"];
-	if (mode < 0 || mode >= SERIAL_MODE_MAP_CNT)	
+	if (mode < 0 || mode >= SERIAL_MODE_MAP_CNT)
 		return;
 	m_mode = SERIAL_MODE_MAP[mode];
 
@@ -75,14 +75,24 @@ void ShpDataGSM::init(JsonVariant portCfg)
 		return;
 	}
 
-	
+	//delay(5000);
+
+	pinMode(27, OUTPUT);
+	digitalWrite(27, HIGH);
+	Serial.println("START: ");
+	Serial.println(millis());
+	delay(1000);
+	Serial.println("STOP: ");
+	Serial.println(millis());
+	digitalWrite(27, LOW);
+
 	log(shpllDebug, "configured: pinRX=%d, pinTX=%d, speed=%d, mode=%x", m_rxPin, m_txPin, m_speed, m_mode);
 
 	m_hwSerial = new HardwareSerial(g_cntUarts++);
 	m_hwSerial->begin(m_speed, m_mode, m_rxPin, m_txPin);
 }
 
-void ShpDataGSM::onMessage(const char* topic, const char *subCmd, byte* payload, unsigned int length)
+void ShpDataGSM::onMessage(byte* payload, unsigned int length, const char* subCmd)
 {
 	if (!subCmd)
 	{
@@ -127,7 +137,7 @@ void ShpDataGSM::onMessage(const char* topic, const char *subCmd, byte* payload,
 
 	for (int i = pnp + 1; i < length; i++)
 		payloadStr.concat((char)payload[i]);
-	
+
 	if (phoneNumber[0] == 0)
 	{
 		log (shpllError, "invalid or missing phone number");
@@ -144,13 +154,13 @@ void ShpDataGSM::addQueueItem(int8_t action, const char *phoneNumber, String tex
 		if (m_queue[i].qState != qsFree)
 			continue;
 
-		m_queue[i].qState = qsLocked;	
+		m_queue[i].qState = qsLocked;
 		strcpy(m_queue[i].phoneNumber, phoneNumber);
 		m_queue[i].action = action;
 		m_queue[i].text = text;
 		m_queue[i].startAfter = millis() + 10;
 
-		m_queue[i].qState = qsDoIt;	
+		m_queue[i].qState = qsDoIt;
 		m_queueRequests++;
 
 		break;
@@ -158,7 +168,7 @@ void ShpDataGSM::addQueueItem(int8_t action, const char *phoneNumber, String tex
 }
 
 void ShpDataGSM::runQueueItem(int i)
-{	
+{
 	m_queueRequests--;
 
 	if (m_queue[i].action == dgaSms)
@@ -185,8 +195,18 @@ bool ShpDataGSM::sendCmd(const char* cmd, const char *expectedResult /* = NULL *
 	if (expectedResult)
 	{
 		delay(200);
+		/*
+		int waitCnt = 0;
+		while (!m_hwSerial->available())
+		{
+			delay(10);
+			waitCnt++;
+			if (waitCnt > 100)
+				break;
+		}*/
 		readResponse();
-		if (m_responseRows < 2)
+		//printResponse();
+		if (m_responseRows < 1)
 			return false;
 
 		if (strcmp(m_response[m_responseRows - 1], expectedResult) == 0)
@@ -198,13 +218,14 @@ bool ShpDataGSM::sendCmd(const char* cmd, const char *expectedResult /* = NULL *
 		if (strcmp(m_response[m_responseRows - 1], "OK") == 0 && m_responseRows > 2 && strcmp(m_response[m_responseRows - 2], expectedResult) == 0)
 			return true;
 
-		return false;	
+		return false;
 	}
 
 	return true;
 }
 
-bool ShpDataGSM::readResponse()
+/*
+bool ShpDataGSM::readResponseOLD()
 {
 	bool waitForAll = true;
 
@@ -219,7 +240,7 @@ bool ShpDataGSM::readResponse()
 
 	while (!responseBytes)
 	{
-		while (m_hwSerial->available()) 
+		while (m_hwSerial->available())
 		{
 			char c = (char)m_hwSerial->read();
 			responseBytes++;
@@ -229,6 +250,8 @@ bool ShpDataGSM::readResponse()
 				continue; // \r
 			if (c == 10)
 			{ // \n
+				//if (m_responseCharPosition == 0)
+				//	continue; // blank line
 				m_responseRows++;
 				m_responseCharPosition = 0;
 				m_response[m_responseRows][m_responseCharPosition] = 0;
@@ -259,7 +282,7 @@ bool ShpDataGSM::readResponse()
 			responseBytes = 0;
 
 		unsigned long timeLen = millis() - now;
-		
+
 		if (timeLen > timeout)
 		{
 			log (shpllDebug, "ShpDataGSM::readResponse timeout");
@@ -272,6 +295,91 @@ bool ShpDataGSM::readResponse()
 		//printResponse();
 		return true;
 	}
+
+	return false;
+}
+*/
+
+bool ShpDataGSM::readResponse()
+{
+	//Serial.println("RRBegin");
+	bool waitForAll = true;
+
+	m_responseCharPosition = 0;
+	m_responseRows = 0;
+	m_response[0][0] = 0;
+	int responseBytes = 0;
+	int totalResponseBytes = 0;
+	bool done = false;
+	unsigned long now = millis();
+	unsigned long timeout = 5000; // 3 secs
+
+	while (1)
+	{
+		while (m_hwSerial->available())
+		{
+			char c = (char)m_hwSerial->read();
+			//Serial.println(c);
+			responseBytes++;
+			totalResponseBytes++;
+			now = millis();
+			if (c == 13)
+				continue; // \r
+			if (c == 10)
+			{ // \n
+				//if (m_responseCharPosition == 0)
+				//	continue; // blank line
+				m_responseRows++;
+				m_responseCharPosition = 0;
+				m_response[m_responseRows][m_responseCharPosition] = 0;
+
+				continue;
+			}
+
+			m_response[m_responseRows][m_responseCharPosition++] = c;
+			m_response[m_responseRows][m_responseCharPosition] = 0;
+
+			if (m_responseCharPosition == MAX_DATA_GSM_SERIAL_BUF_LEN)
+			{
+				m_responseRows++;
+				m_responseCharPosition = 0;
+				m_response[m_responseRows][m_responseCharPosition] = 0;
+			}
+
+			if (m_responseRows == MAX_DATA_GSM_SERIAL_RESPONSE_ROWS)
+			{
+				//Serial.println("RREnd 2");
+				return true;
+			}
+		}
+
+		//if (waitForAll && m_response[m_responseRows][0] != 0 && strcmp(m_response[m_responseRows - 1], "OK") != 0)
+		//	responseBytes = 0;
+
+		unsigned long timeLen = millis() - now;
+
+		if (timeLen > timeout)
+		{
+			log (shpllDebug, "ShpDataGSM::readResponse timeout");
+			break;
+		}
+
+		if (m_responseRows == 0 && m_responseCharPosition == 0)
+		{
+			delay(10);
+			continue;
+		}
+		break;
+	}
+
+	if (m_responseRows || m_responseCharPosition)
+	{
+		//printResponse();
+		//Serial.println("RREnd 1");
+		return true;
+	}
+
+	//Serial.println("RREnd 0");
 
 	return false;
 }
@@ -307,7 +415,19 @@ void ShpDataGSM::initGSMModule()
 		if (m_response[1][0] != 0)
 			log (shpllDebug, m_response[1]);
 	}
-	
+
+	/*
+	Serial.println("Init DUAL SIM....");
+	while (!sendCmd("AT+CIURC=1", "OK"))
+	{
+		log (shpllError, "ShpDataGSM::initGSMModule: DUAL sim not working...");
+		printResponse();
+
+		break;
+	}
+	*/
+
+
 	delay(200);
 	log(shpllDebug, "check network...");
 	while (!sendCmd("AT+CREG?", "+CREG: 0,1"))
@@ -317,6 +437,16 @@ void ShpDataGSM::initGSMModule()
 		return;
 	}
 	//printResponse();
+
+	/*
+	delay(200);
+	while (!sendCmd("AT+CREGDS?", "+CREGDS: 0,1"))
+	{
+		log (shpllStatus, "wait for DUAL gsm signal");
+		printResponse();
+		//return;
+	}
+	*/
 
 	delay(200);
 	log(shpllDebug, "check operator...");
@@ -330,18 +460,33 @@ void ShpDataGSM::initGSMModule()
 	// -- CLIP
 	if (!sendCmd("AT+CLIP=1", "OK"))
 	{
-
+		//Serial.println("AT+CLIP=1 FAIL");
+		printResponse();
 	}
 
 	// -- set text SMS format (disable PDU)
 	if (!sendCmd("AT+CMGF=1", "OK"))
 	{
+		//Serial.println("AT+CMGF=1 FAIL");
+		printResponse();
 	}
 
 	// -- disable on-fly SMS signalization
 	if (!sendCmd("AT+CNMI=0,0", "OK"))
 	{
+		//Serial.println("AT+CNMI=0,0 FAIL");
+		printResponse();
 	}
+
+	if (!sendCmd("AT+GSN", "OK"))
+	{ // DETECT IMEI
+
+		printResponse();
+	}
+	else
+		printResponse();
+
+
 
 	// -- call progress monitoring
 	if (!sendCmd("ATX4", "OK"))
@@ -354,6 +499,35 @@ void ShpDataGSM::initGSMModule()
 		Serial.println("ATV1 FAIL");
 		printResponse();
 	}
+
+/*
+	if (!sendCmd("AT+CNMP=13", "OK"))
+	{
+		Serial.println("AT+CNMP=13 FAIL");
+		printResponse();
+	}
+
+	if (!sendCmd("AT+CNSMOD=3", "OK"))
+	{
+		Serial.println("AT+CNSMOD=3 FAIL");
+		printResponse();
+	}
+*/
+
+/*
+	if (!sendCmd("AT+CFUN=1,1", "OK"))
+	{
+		Serial.println("AT+CFUN=1,1 FAIL");
+		printResponse();
+	}
+
+	if (!sendCmd("AT+CGATT=0", "OK"))
+	{
+		Serial.println("AT+CGATT=0 FAIL");
+		printResponse();
+	}
+*/
+
 	if (!sendCmd("AT+MORING=1", "OK"))
 	{
 		Serial.println("AT+MORING=1 FAIL");
@@ -379,7 +553,7 @@ bool ShpDataGSM::sendSMS (const char *number, const char *text)
 	sendCmd("AT+CMGD=1", "OK");
 	sendCmd("AT+CMGD=1,4", "OK");
 
-	return true;	
+	return true;
 }
 
 bool ShpDataGSM::call (const char *number)
@@ -405,17 +579,18 @@ bool ShpDataGSM::call (const char *number)
 
 	m_outgoingCallStartedAt = millis();
 	m_outgoingCallInProgress = true;
-	
-	return true;	
+
+	return true;
 }
 
 void ShpDataGSM::hangup()
 {
-	Serial.println ("HANG-UP1");
-	if (!sendCmd("ATH", "NO CARRIER"))
+	//Serial.println ("HANG-FUNC");
+	if (!sendCmd("ATH", "OK"))
 	{
-		Serial.println("hangup failed....");
-		printResponse();
+		//Serial.println("hangup failed....");
+		//printResponse();
+		//return;
 	}
 
 	m_incomingCallPhoneNumber[0] = 0;
@@ -428,14 +603,14 @@ bool ShpDataGSM::checkIncomingSMS()
 	0: AT+CMGR=1
 	1: +CMGR: "REC UNREAD","+420774077436","","20/06/11,14:01:44+08"
 	2: Test 1
-	3: 
+	3:
 	4: OK
 	*/
 
 	/*
 	0: AT+CMGD=1
 	1: OK
-	2: 
+	2:
 	*/
 
 	if (!sendCmd("AT+CMGR=1", "OK"))
@@ -463,13 +638,10 @@ bool ShpDataGSM::checkIncomingSMS()
 		if (searchPhoneNumber(m_response[i] + 6, phoneNumber))
 		{
 			Serial.printf("SMS FROM `%s`\n", phoneNumber);
-			for (int t = i + 1; t <= m_responseRows - 2; t++)
+			for (int t = i + 1; t <= m_responseRows - 1; t++)
 			{
-				if (m_response[t][0] == 0 && strcmp(m_response[t + 1], "OK") == 0 && m_response[t+2][0] == 0)
-					break;
-
-				if (smsText.length())
-					smsText.concat("\\n");
+//				if (smsText.length())
+//					smsText.concat("\\n");
 
 				smsText.concat(m_response[t]);
 			}
@@ -494,7 +666,7 @@ bool ShpDataGSM::checkIncomingSMS()
 
 void ShpDataGSM::checkModule()
 {
-	// -- UART 
+	// -- UART
 	while (!sendCmd("AT", "OK"))
 	{
 		log (shpllError, "ShpDataGSM::checkModule: module not working");
@@ -512,7 +684,7 @@ void ShpDataGSM::checkModule()
 	}
 	if (m_response[1][0] != '+' || m_response[1][4] != ':')
 	{
-		
+
 		return;
 	}
 
@@ -523,7 +695,7 @@ void ShpDataGSM::checkModule()
 
 	int signalQuality = atoi(signalQaulityStr);
 
-	
+
 	if (signalQuality < 10)
 	{
 		log(shpllError, "bad GSM signal (%d)", signalQuality);
@@ -535,7 +707,7 @@ void ShpDataGSM::checkModule()
 		log(shpllError, "poor GSM signal (%d)", signalQuality);
 		return;
 	}
-	
+
 	if (signalQuality < 20)
 	{
 		log(shpllInfo, "GSM signal is good (%d)", signalQuality);
@@ -550,24 +722,53 @@ bool ShpDataGSM::checkIncomingCall()
 	/*
 	0: AT+CNMI=0,0
 	1: RING
-	2: 
+	2:
 	3: +CLIP: "+420774077436",145,"",0,"",0
-	4: 
+	4:
 	*/
 
 	/*
 	0: AT+CNMI=0,0
 	1: NO CARRIER
-	2: 
+	2:
 	*/
 
+	if (m_incomingCallRingInProgress > m_incomingCallMaxRings)
+	{
+		hangup();
+		return true;
+	}
+
 	if (!m_hwSerial->available())
+	{
+		if (m_incomingCallRingInProgress)
+		{
+			//Serial.println ("ghost ring1...");
+			m_incomingCallRingInProgress++;
+			return true;
+			//Serial.println ("hangup 01...");
+			//sleep(300);
+			//hangup();
+		}
 		return false;
+	}
 
 	readResponse();
+	printResponse();
 
 	if (m_responseRows < 1)
+	{
+		if (m_incomingCallRingInProgress)
+		{
+			//Serial.println ("ghost ring2...");
+			m_incomingCallRingInProgress++;
+			return true;
+			//Serial.println ("hangup 02...");
+			//sleep(300);
+			//hangup();
+		}
 		return false;
+	}
 
 	if (strcmp(m_response[0], "NO CARRIER") == 0 || (m_responseRows > 1 &&strcmp(m_response[1], "NO CARRIER") == 0))
 	{ // hangup
@@ -581,12 +782,6 @@ bool ShpDataGSM::checkIncomingCall()
 	if (strcmp(m_response[0], "RING") != 0 && strcmp(m_response[1], "RING") != 0)
 		return false;
 
-	if (m_incomingCallRingInProgress > m_incomingCallMaxRings)
-	{
-		hangup();
-		return true;
-	}
-
 	for (int i = 0; i <= m_responseRows; i++)
 	{
 		if (strncmp(m_response[i], "+CLIP: ", 7))
@@ -595,11 +790,11 @@ bool ShpDataGSM::checkIncomingCall()
 		char phoneNumber[MAX_PHONE_NUMBER_LEN] = "";
 		if (searchPhoneNumber(m_response[i] + 6, phoneNumber))
 		{
-			m_incomingCallRingInProgress++;
+			m_incomingCallRingInProgress += 4;
 
 			if (strcmp (m_incomingCallPhoneNumber, phoneNumber) == 0)
 			{ // same number
-				//Serial.println ("ring...");
+				Serial.println ("ring...");
 				return false;
 			}
 			//Serial.printf("INCOMING CALL FROM `%s`\n", phoneNumber);
@@ -611,6 +806,9 @@ bool ShpDataGSM::checkIncomingCall()
 			payload.concat("\"}");
 
 			app->publish(payload.c_str(), m_valueTopic.c_str());
+
+			//Serial.println ("HANGUP 3");
+			//hangup();
 
 			return true;
 		}
@@ -655,7 +853,7 @@ bool ShpDataGSM::checkOutgoingCall()
 		m_outgoingCallStartedAt = 0;
 	}
 
-	return true;	
+	return true;
 }
 
 bool ShpDataGSM::searchPhoneNumber(const char *srcText, char *result)
@@ -700,10 +898,10 @@ void ShpDataGSM::loop()
 		return;
 	}
 
-	m_nextCheck = now + m_checkInterval;	
+	m_nextCheck = now + m_checkInterval;
 
-	if (checkOutgoingCall())
-		return;
+	//if (checkOutgoingCall())
+	//	return;
 
 	if (checkIncomingCall())
 		return;
@@ -711,8 +909,8 @@ void ShpDataGSM::loop()
 	if (m_incomingCallRingInProgress)
 		return;
 
-	if (checkIncomingSMS())
-		return;
+	//if (checkIncomingSMS())
+	//	return;
 
 	if (m_nextModuleCheck < now)
 	{
@@ -724,7 +922,7 @@ void ShpDataGSM::loop()
 	{
 		if (m_queue[i].qState != qsDoIt)
 			continue;
-		
+
 		if (m_queue[i].startAfter > now)
 			continue;
 
@@ -734,6 +932,6 @@ void ShpDataGSM::loop()
 		break;
 	}
 
-	m_nextCheck = millis() + m_checkInterval;	
+	m_nextCheck = millis() + m_checkInterval;
 }
 

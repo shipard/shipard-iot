@@ -65,10 +65,10 @@ boolean ApplicationDSEN::publish(const char *payload, const char *topic /* = NUL
 	String data = topic;
 	data.concat ("\n");
 	data.concat (payload);
-	
+
 	//Serial.println ("ApplicationDSEN::publish");
 	//Serial.println (data);
-	
+
 	m_espClient->sendData(data, SHP_ENPT_MESSAGE, m_espClient->m_serverAddress.c_str());
   return true;
 }
@@ -117,6 +117,8 @@ void ApplicationDSEN::loop()
 	if (m_espClient)
 		m_espClient->loop();
 
+
+	/*
 	unsigned long now = millis();
 	if ((m_wakeUpFromSleep && now > 500) || (!m_wakeUpFromSleep && now > 10 * 1000))
 	{
@@ -128,6 +130,7 @@ void ApplicationDSEN::loop()
 	}
 	//Serial.println("test");
 	//delay(100);
+	*/
 }
 
 void ApplicationDSEN::checks()

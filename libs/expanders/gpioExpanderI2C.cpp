@@ -1,7 +1,7 @@
 extern SHP_APP_CLASS *app;
 
 
-ShpGpioExpanderI2C::ShpGpioExpanderI2C() : 
+ShpGpioExpanderI2C::ShpGpioExpanderI2C() :
 																						m_expType(SHP_GPIO_CHIP_PCF8575),
 																						m_bus(NULL),
 																						m_address(-1),
@@ -32,7 +32,7 @@ void ShpGpioExpanderI2C::init(JsonVariant portCfg)
 	// -- busPortid
 	m_busPortId = NULL;
 	if (portCfg["i2cBusPortId"] != nullptr)
-		m_busPortId = portCfg["i2cBusPortId"];
+		m_busPortId = portCfg["i2cBusPortId"].as<const char*>();
 
 	if (!m_busPortId)
 		return;
@@ -42,12 +42,12 @@ void ShpGpioExpanderI2C::init(JsonVariant portCfg)
 	{
 		char *err;
 		m_address = strtol(portCfg["address"], &err, 16);
-		if (*err) 
+		if (*err)
 		{
 			log (shpllError, "Invalid I2C address format");
-			return;	
-		}		
-		
+			return;
+		}
+
 	}
 	if (m_address < 0 || m_address > 127)
 	{
@@ -59,12 +59,12 @@ void ShpGpioExpanderI2C::init(JsonVariant portCfg)
 	if (portCfg["expType"] != nullptr)
 		m_expType = portCfg["expType"];
 
-	if (m_expType < 0 || m_expType > SHP_GPIO_CHIP_MAX_VALUE)	
+	if (m_expType < 0 || m_expType > SHP_GPIO_CHIP_MAX_VALUE)
 	{
 		return;
 	}
 
-	m_valid = true;	
+	m_valid = true;
 
 	//Serial.printf("GPIO EXPANDER START: busPortId: `%s`, address=`%02x`, valid=`%d`\n", m_busPortId, m_address, m_valid);
 }
@@ -77,19 +77,19 @@ void ShpGpioExpanderI2C::init2()
 	m_bus = (ShpBusI2C*)app->ioPort(m_busPortId);
 
 	if (m_bus)
-	{		
+	{
 		delay(100);
 		if (m_expType == SHP_GPIO_CHIP_PCF8575)
 		{
 			write(word(B11111111,B11111111));
-			delay(100);	
+			delay(100);
 			write(m_bits);
 		}
 		else if (m_expType == SHP_GPIO_CHIP_MCP23017)
 		{
 			write2B(0, 0);
 			write2B(1, 0);
-			delay(100);	
+			delay(100);
 			write2B(0x12, lowByte(m_bits));
 			write2B(0x13, highByte(m_bits));
 		}
@@ -104,7 +104,7 @@ void ShpGpioExpanderI2C::setPinState(uint8_t pin, uint8_t value)
 {
 	if (value)
 		m_bits |= bit(pin);
-	else	
+	else
 		m_bits &= ~bit(pin);
 
 	if (m_expType == SHP_GPIO_CHIP_PCF8575)
@@ -159,9 +159,9 @@ void ShpGpioExpanderI2C::readDigitalInput()
 			{
 				if (newValue)
 					m_bits |= bit(i);
-				else	
+				else
 					m_bits &= ~bit(i);
-				
+
 				if (m_inputIOPorts[i])
 					m_inputIOPorts[i]->setValue(newValue);
 			}

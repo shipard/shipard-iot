@@ -48,8 +48,8 @@ class ShpEspNowServerIOPort : public ShpIOPort
 
 		virtual void init(JsonVariant portCfg);
 		virtual void loop();
-		virtual void onMessage(const char* topic, const char *subCmd, byte* payload, unsigned int length);
-		
+		virtual void onMessage(byte* payload, unsigned int length, const char* subCmd);
+
 	protected:
 
 	ShpEspNowServer *m_espNowServer;

@@ -1,6 +1,6 @@
 extern SHP_APP_CLASS *app;
 
-ShpMeteoBME280::ShpMeteoBME280() : 
+ShpMeteoBME280::ShpMeteoBME280() :
 																	m_address(-1),
 																	m_bus(NULL),
 																	m_sensor(NULL),
@@ -36,7 +36,7 @@ void ShpMeteoBME280::init(JsonVariant portCfg)
 	// -- busPortid
 	m_busPortId = NULL;
 	if (portCfg["i2cBusPortId"] != nullptr)
-		m_busPortId = portCfg["i2cBusPortId"];
+		m_busPortId = portCfg["i2cBusPortId"].as<const char*>();
 
 	if (!m_busPortId)
 		return;
@@ -46,12 +46,12 @@ void ShpMeteoBME280::init(JsonVariant portCfg)
 	{
 		char *err;
 		m_address = strtol(portCfg["address"], &err, 16);
-		if (*err) 
+		if (*err)
 		{
 			log (shpllError, "Invalid I2C address format");
-			return;	
-		}		
-		
+			return;
+		}
+
 	}
 	if (m_address < 0 || m_address > 127)
 	{
@@ -59,7 +59,7 @@ void ShpMeteoBME280::init(JsonVariant portCfg)
 		return;
 	}
 
-	m_valid = true;	
+	m_valid = true;
 }
 
 void ShpMeteoBME280::init2()
@@ -70,7 +70,7 @@ void ShpMeteoBME280::init2()
 	m_bus = (ShpBusI2C*)app->ioPort(m_busPortId);
 
 	if (m_bus)
-	{		
+	{
 		m_sensor = new Adafruit_BME280();
 		bool status = m_sensor->begin(m_address, m_bus->wire());
 		if (!status)
@@ -114,12 +114,12 @@ void ShpMeteoBME280::loop()
 	sprintf(b, "%.1f", m_pressure);
 	app->publish(b, m_topicPressure.c_str());
 
-	
+
 	Serial.printf("BME280 (%ld):\n", millis());
 	Serial.println(m_temperature);
 	Serial.println(m_humidity);
 	Serial.println(m_pressure);
-	
+
 
 	m_nextMeasure = now + m_measureInterval;
 }

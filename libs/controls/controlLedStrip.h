@@ -9,7 +9,7 @@
 
 // -- shipard color mode cfg item --> board value
 /* "enumValues": {
-		"0": "G-R-B (WS2812, Neopixel,...)", 
+		"0": "G-R-B (WS2812, Neopixel,...)",
 		"1": "R-B-G (WS2811, SM16703,...)",
 		"2": "R-G-B",
 		"3": "G-B-R",
@@ -21,7 +21,7 @@
 static unsigned long LED_STRIP_COLOR_MODES[LED_STRIP_COLOR_MODES_CNT] = {NEO_GRB, NEO_RBG, NEO_RGB, NEO_GBR, NEO_BRG, NEO_BGR};
 
 
-class ShpControlLedStrip : public ShpIOPort 
+class ShpControlLedStrip : public ShpIOPort
 {
 	public:
 
@@ -29,12 +29,12 @@ class ShpControlLedStrip : public ShpIOPort
 
 		virtual void init(JsonVariant portCfg);
 		virtual void loop();
-		virtual void onMessage(const char* topic, const char *subCmd, byte* payload, unsigned int length);
+		virtual void onMessage(byte* payload, unsigned int length, const char* subCmd);
 
-	
+
 	protected:
 
-		void addQueueItemFromMessage(const char* topic, byte* payload, unsigned int length);
+		void addQueueItemFromMessage(byte* payload, unsigned int length);
 
 		void setColorAll (uint32_t color);
 

@@ -23,7 +23,7 @@ class ShpControlBinary : public ShpIOPort
 		virtual void init(JsonVariant portCfg);
 		virtual void init2();
 		virtual void loop();
-		virtual void onMessage(const char* topic, const char *subCmd, byte* payload, unsigned int length);
+		virtual void onMessage(byte* payload, unsigned int length, const char* subCmd);
 
 	protected:
 
@@ -68,7 +68,7 @@ class ShpControlBinary : public ShpIOPort
 
 		void setPinState(uint8_t value);
 
-		void addQueueItemFromMessage(const char* topic, byte* payload, unsigned int length);
+		void addQueueItemFromMessage(byte* payload, unsigned int length);
 		void addQueueItemPressButton(int duration, unsigned long startAfter, bool unpush);
 		void addQueueItemFlash(int durations[], int durationsCnt, int repeatCnt, int totalDuration, unsigned long startAfter);
 

@@ -80,7 +80,7 @@ class BuildApp
 			return;
 		}
 
-		$this->buildChannel = 'stable';
+		$this->buildChannel = 'devel';
 		$this->buildCommit = shell_exec("git log --pretty=format:'%h' -n 1");
 
 		$this->buildVersionId = $this->libCfg['version'].'-'.$this->buildCommit;
@@ -162,7 +162,7 @@ class BuildApp
 		$dstPathCore = '../BUILD/'.$this->fwFolder.'/'.$projectId;
 		$dstPath = $dstPathCore.'/'.$versionId;
 
-		$dstBaseFileName = $projectId.'-'.$variantId.'-'.$this->buildVersionId.'-fw.bin';
+		$dstBaseFileName = /*$projectId.'-'. */$variantId.'-'.$this->buildVersionId.'-fw.bin';
 		$dstFileName = $dstPath.'/'.$dstBaseFileName;
 
 		echo $dstBaseFileName.'; ';
@@ -175,7 +175,7 @@ class BuildApp
 		$checkSum = sha1_file($dstFileName);
 		echo $checkSum;
 
-		$fwFiles['files'][] = ['fileName' => $dstBaseFileName, 'size' => $fileSize, 'sha1' => $checkSum];
+		$fwFiles['files'][] = ['fwId' => $projectId.'-'.$variantId, 'fileName' => $dstBaseFileName, 'size' => $fileSize, 'sha1' => $checkSum];
 
 		return TRUE;
 	}
@@ -203,7 +203,10 @@ class BuildApp
 		foreach ($this->projectsCfg['projects'][$projectId]['variants'] as $variantId => $variantCfg)
 		{
 			$logFileName = '../BUILD/logs/'.$projectId.'-'.$variantId.'.log';
-			echo (" -> ".$variantId.": ");
+
+			$vt = sprintf("%-22s: ", $variantId);
+			echo (" -> ".$vt);
+
 			$cmd = $this->localCfg['pioCmd'].' run -s -e '.$variantId.' 2> '.$logFileName;
 			$buildResultCode = 0;
 			passthru($cmd, $buildResultCode);
@@ -267,7 +270,7 @@ class BuildApp
 		$doUploadLocal = $this->arg('upload-local');
 		if ($doUploadLocal === TRUE)
 			$this->upload(TRUE);
-	
+
 		return TRUE;
 	}
 
@@ -285,7 +288,7 @@ class BuildApp
 			echo "--- UPLOAD ---\n";
 			$remoteUser = $this->localCfg['remoteUser'];
 			$remoteServer = $this->localCfg['remoteServer'];
-			$remoteDir = '/var/www/webs/download.shipard.org/shipard-iot/fw/ib/'.$this->buildChannel;
+			$remoteDir = '/var/www/shpd-webs/download.shipard.org/shipard-iot/fw/ib/'.$this->buildChannel;
 		}
 		foreach ($this->projectsCfg['projects'] as $projectId => $projectCfg)
 		{

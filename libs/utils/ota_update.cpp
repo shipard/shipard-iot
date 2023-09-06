@@ -6,6 +6,8 @@ ShpOTAUpdate::ShpOTAUpdate()
 {
 }
 
+
+#if defined(SHP_ETH) || defined(SHP_WIFI)
 void ShpOTAUpdate::doFwUpgradeRun(int fwLenght, String fwUrl)
 {
 	clearUpgradeRequest();
@@ -18,7 +20,7 @@ void ShpOTAUpdate::doFwUpgradeRun(int fwLenght, String fwUrl)
   HTTPClient http;
 
 	http.setTimeout(60);
-  if (http.begin(client, fwUrl)) 
+  if (http.begin(client, fwUrl))
   {
     //Serial.print("[OTA] GET...");
 		app->log(shpllStatus, "[OTA UPGRADE] download started");
@@ -31,14 +33,14 @@ void ShpOTAUpdate::doFwUpgradeRun(int fwLenght, String fwUrl)
       if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY)
       {
         //data = http.getString();
-      } 
-      else 
+      }
+      else
       {
 				app->log(shpllError, "[OTA UPGRADE] download FAILED; error: `%s`", http.errorToString(httpCode).c_str());
 				return;
       }
-    } 
-    else 
+    }
+    else
     {
 			app->log(shpllError, "[OTA UPGRADE] download FAILED; unable to connect");
 			return;
@@ -49,7 +51,7 @@ void ShpOTAUpdate::doFwUpgradeRun(int fwLenght, String fwUrl)
 		app->log(shpllError, "[OTA UPGRADE] download FAILED; unable to GET");
 		return;
 	}
-	
+
 
 	bool canBegin = Update.begin(fwLenght);
 	if (canBegin)
@@ -57,28 +59,28 @@ void ShpOTAUpdate::doFwUpgradeRun(int fwLenght, String fwUrl)
 		size_t fwLoadedSize = Update.writeStream(http.getStream());
 		//Serial.printf(" DOWNLOADED: %i bytes \n", fwLoadedSize);
 		app->log(shpllStatus, "[OTA UPGRADE] downloaded %i bytes", fwLoadedSize);
-		if (Update.end()) 
+		if (Update.end())
 		{
 			app->log(shpllStatus, "[OTA UPGRADE] done!");
 			//Serial.println("OTA done!");
-			if (Update.isFinished()) 
+			if (Update.isFinished())
 			{
 				app->log(shpllStatus, "[OTA UPGRADE] Update successfully completed. Rebooting...");
 				//Serial.println("Update successfully completed. Rebooting.");
 				ESP.restart();
-			} 
-			else 
+			}
+			else
 			{
 				app->log(shpllError, "[OTA UPGRADE] Update not finished? Something went wrong!");
 				//Serial.println("Update not finished? Something went wrong!");
 			}
-		} 
-		else 
+		}
+		else
 		{
 			app->log(shpllError, "[OTA UPGRADE] Error #%d: %s", Update.getError(), Update.errorString());
-		}		
+		}
 	}
-  else 
+  else
 	{
 		app->log(shpllError, "[OTA UPGRADE] Not enough space to begin OTA");
 		client.flush();
@@ -86,6 +88,8 @@ void ShpOTAUpdate::doFwUpgradeRun(int fwLenght, String fwUrl)
 
 	http.end();
 }
+#endif
+
 
 void ShpOTAUpdate::doFwUpgradeRequest(String payload)
 {
@@ -143,3 +147,7 @@ void ShpOTAUpdate::clearUpgradeRequest()
 	app->m_prefs.putString("fwUrl", "");
 	app->m_prefs.end();
 }
+
+
+
+

@@ -64,7 +64,7 @@ void ShpControlBinary::init(JsonVariant portCfg)
 		m_PinStateCurrent = m_PinStateOn;
 
 	if (portCfg["pin_expPortId"] != nullptr)
-		m_pinExpPortId = portCfg["pin_expPortId"];
+		m_pinExpPortId = portCfg["pin_expPortId"].as<const char*>();
 }
 
 void ShpControlBinary::init2()
@@ -83,12 +83,12 @@ void ShpControlBinary::init2()
 	setPinState(m_PinStateCurrent);
 }
 
-void ShpControlBinary::onMessage(const char* topic, const char *subCmd, byte* payload, unsigned int length)
+void ShpControlBinary::onMessage(byte* payload, unsigned int length, const char* subCmd)
 {
-	addQueueItemFromMessage(topic, payload, length);
+	addQueueItemFromMessage(payload, length);
 }
 
-void ShpControlBinary::addQueueItemFromMessage(const char* topic, byte* payload, unsigned int length)
+void ShpControlBinary::addQueueItemFromMessage(byte* payload, unsigned int length)
 {
 	/* PAYLOADS:
 	 * "0" -> OFF

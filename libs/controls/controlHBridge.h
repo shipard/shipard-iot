@@ -4,8 +4,12 @@
 
 #define HBRIDGE_CONTROL_QUEUE_LEN 10
 
+#define HBRIDGE_LEDMODE_NONE 	0
+#define HBRIDGE_LEDMODE_BIN 	1
+#define HBRIDGE_LEDMODE_PWM 	2
 
-class ShpControlHBridge : public ShpIOPort 
+
+class ShpControlHBridge : public ShpIOPort
 {
 	public:
 
@@ -14,7 +18,7 @@ class ShpControlHBridge : public ShpIOPort
 		virtual void init(JsonVariant portCfg);
 		virtual void init2();
 		virtual void loop();
-		virtual void onMessage(const char* topic, const char *subCmd, byte* payload, unsigned int length);
+		virtual void onMessage(byte* payload, unsigned int length, const char* subCmd);
 
 	protected:
 
@@ -26,7 +30,10 @@ class ShpControlHBridge : public ShpIOPort
 		const char *m_pin2ExpPortId;
 		ShpGpioExpander *m_pin2GpioExpander;
 
-
+		int8_t m_ledMode;
+		int8_t m_pinLed;
+		uint8_t m_ledBr;
+		uint8_t m_pwmChannel;
 
 		int8_t m_stateCurrent;
 

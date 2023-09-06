@@ -1,0 +1,35 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../libs"
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"atomic": "cpp",
+			"cstdint": "cpp",
+			"__bit_reference": "cpp",
+			"__hash_table": "cpp",
+			"__split_buffer": "cpp",
+			"__tree": "cpp",
+			"array": "cpp",
+			"deque": "cpp",
+			"initializer_list": "cpp",
+			"list": "cpp",
+			"map": "cpp",
+			"string": "cpp",
+			"string_view": "cpp",
+			"unordered_map": "cpp",
+			"unordered_set": "cpp",
+			"vector": "cpp",
+			"filesystem": "cpp",
+			"sstream": "cpp",
+			"complex": "cpp",
+			"cstddef": "cpp",
+			"stdexcept": "cpp"
+		}
+	}
+}

@@ -3,17 +3,33 @@
 		"iot-box-lan-core": {
 			"title": "iot-box-lan" ,
 			"variants": {
-				"esp32-poe": {
-					"title": "esp32-poe"
+				"sms72-esp32-eth": {
+					"title": "sms72-esp32-eth"
 				},
-				"esp32-gateway": {
-					"title": "esp32-gw"
+				"sms72-esp32-wifi": {
+					"title": "sms72-esp32-wifi"
 				},
-				"esp32-wifi": {
-					"title": "esp32-wifi"
+				"ibl-oli-esp32-poe": {
+					"title": "ibl-oli-esp32-poe"
+				},
+				"ibl-oli-esp32-gateway": {
+					"title": "ibl-oli-esp32-gateway"
+				},
+				"ibl-oli-esp32-evb": {
+					"title": "ibl-oli-esp32-evb"
+				},
+				"ibl-esp32-wifi": {
+					"title": "ibl-esp32-wifi"
+				}
+			}
+		},
+		"iot-box-can-core": {
+			"title": "iot-box-can" ,
+			"variants": {
+				"sms72-esp32-can": {
+					"title": "sms72-esp32-can"
 				}
 			}
 		}
 	}
 }
-

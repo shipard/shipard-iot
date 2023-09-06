@@ -1,6 +1,6 @@
 extern SHP_APP_CLASS *app;
 
-ShpMeteoBH1750::ShpMeteoBH1750() : 
+ShpMeteoBH1750::ShpMeteoBH1750() :
 																	m_address(-1),
 																	m_bus(NULL),
 																	m_sensor(NULL),
@@ -31,7 +31,7 @@ void ShpMeteoBH1750::init(JsonVariant portCfg)
 	// -- busPortid
 	m_busPortId = NULL;
 	if (portCfg["i2cBusPortId"] != nullptr)
-		m_busPortId = portCfg["i2cBusPortId"];
+		m_busPortId = portCfg["i2cBusPortId"].as<const char*>();
 
 	if (!m_busPortId)
 		return;
@@ -41,12 +41,12 @@ void ShpMeteoBH1750::init(JsonVariant portCfg)
 	{
 		char *err;
 		m_address = strtol(portCfg["address"], &err, 16);
-		if (*err) 
+		if (*err)
 		{
 			log (shpllError, "Invalid I2C address format");
-			return;	
-		}		
-		
+			return;
+		}
+
 	}
 	if (m_address < 0 || m_address > 127)
 	{
@@ -54,7 +54,7 @@ void ShpMeteoBH1750::init(JsonVariant portCfg)
 		return;
 	}
 
-	m_valid = true;	
+	m_valid = true;
 }
 
 void ShpMeteoBH1750::init2()
@@ -65,7 +65,7 @@ void ShpMeteoBH1750::init2()
 	m_bus = (ShpBusI2C*)app->ioPort(m_busPortId);
 
 	if (m_bus)
-	{		
+	{
 		m_sensor = new BH1750();
 		bool status = m_sensor->begin(BH1750::CONTINUOUS_HIGH_RES_MODE, m_address, m_bus->wire());
 		if (!status)
@@ -88,7 +88,7 @@ void ShpMeteoBH1750::loop()
 	if (now < m_nextMeasure)
 		return;
 
-	if (m_sensor->measurementReady(true)) 
+	if (m_sensor->measurementReady(true))
 	{
 		float thisLightLevel = m_sensor->readLightLevel();
 
@@ -112,7 +112,7 @@ void ShpMeteoBH1750::loop()
 			sprintf(b, "%.1f", m_lightLevel);
 			app->publish(b, m_valueTopic.c_str());
 
-			if (thisLightLevel > 40000.0) 
+			if (thisLightLevel > 40000.0)
 			{ // reduce measurement time - needed in direct sun light
 				if (m_sensor->setMTreg(32)) {
 					//Serial.println(F("Setting MTReg to low value for high light environment"));
@@ -120,9 +120,9 @@ void ShpMeteoBH1750::loop()
 					Serial.println(F("Error setting MTReg to low value for high light environment"));
 				}
 				return;
-      } 
-       
-			if (thisLightLevel > 10.0) 
+      }
+
+			if (thisLightLevel > 10.0)
 			{ // typical light environment
 				if (m_sensor->setMTreg(69)) {
 					//Serial.println(F("Setting MTReg to default value for normal light environment"));
@@ -130,9 +130,9 @@ void ShpMeteoBH1750::loop()
 					Serial.println(F("Error setting MTReg to default value for normal light environment"));
 				}
 				return;
-      } 
-			
-			if (thisLightLevel <= 10.0) 
+      }
+
+			if (thisLightLevel <= 10.0)
 			{ // very low light environment
 				if (m_sensor->setMTreg(138)) {
 					//Serial.println(F("Setting MTReg to high value for low light environment"));

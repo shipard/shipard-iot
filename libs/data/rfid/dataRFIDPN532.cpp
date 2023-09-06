@@ -2,7 +2,7 @@ extern SHP_APP_CLASS *app;
 extern int g_cntUarts;
 void data2HexStr(uint8_t* data, size_t len, char str[]);
 
-void data2HexStrReverse(uint8_t data[], size_t len, char str[]) 
+void data2HexStrReverse(uint8_t data[], size_t len, char str[])
 {
 	const char hex_str[]= "0123456789abcdef";
 
@@ -23,9 +23,9 @@ void data2HexStrReverse(uint8_t data[], size_t len, char str[])
 }
 
 
-ShpDataRFIDPN532::ShpDataRFIDPN532() : 
+ShpDataRFIDPN532::ShpDataRFIDPN532() :
 																m_mode(PN532_MODE_I2C),
-																m_pinRX(-1), 
+																m_pinRX(-1),
 																m_pinTX(-1),
 																m_hwSerial(NULL),
 																m_pn532hsu(NULL),
@@ -71,7 +71,7 @@ void ShpDataRFIDPN532::init(JsonVariant portCfg)
 	if (m_mode == PN532_MODE_I2C)
 	{
 		if (portCfg["i2cBusPortId"] != nullptr)
-			m_busPortId = portCfg["i2cBusPortId"];
+			m_busPortId = portCfg["i2cBusPortId"].as<const char*>();
 
 		if (!m_busPortId)
 		{
@@ -83,6 +83,8 @@ void ShpDataRFIDPN532::init(JsonVariant portCfg)
 	// -- HSU rx / tx pin
 	if (m_mode == PN532_MODE_HSU)
 	{
+		Serial.println("PN532 UART MODE 1");
+
 		if (portCfg["pinRX"] != nullptr)
 			m_pinRX = portCfg["pinRX"];
 		if (portCfg["pinTX"] != nullptr)
@@ -127,6 +129,9 @@ void ShpDataRFIDPN532::init2()
 	}
 	else
 	{ // PN532_MODE_HSU
+
+		Serial.println("PN532 UART MODE 2");
+
 		m_hwSerial = new HardwareSerial(g_cntUarts++);
 		m_hwSerial->begin(115200, SERIAL_8N1, m_pinRX, m_pinTX);
 		sleep(1);
@@ -135,14 +140,14 @@ void ShpDataRFIDPN532::init2()
 		m_nfc = new PN532(*m_pn532hsu);
 		m_nfc->begin();
 	}
-		
+
 	usleep(100000);
 	Serial.println("getFirmwareVersion1");
 	uint32_t versiondata = m_nfc->getFirmwareVersion();
 	usleep(120000);
 	Serial.println("getFirmwareVersion2");
 	versiondata = m_nfc->getFirmwareVersion();
-	if (!versiondata) 
+	if (!versiondata)
 	{
 		log(shpllWarning, "Didn't find PN53x board");
 	}
@@ -160,15 +165,15 @@ void ShpDataRFIDPN532::readTag()
 	boolean success;
   uint8_t uid [] = { 0, 0, 0, 0, 0, 0, 0 };
   uint8_t uidLength;
-  
+
   success = m_nfc->readPassiveTargetID(PN532_MIFARE_ISO14443A, &uid[0], &uidLength);
 
-  if (success) 
+  if (success)
 	{
 		char buffer[MAX_DATA_RFID_PN532_BUF_LEN];
 		data2HexStrReverse(uid, uidLength, buffer);
-		
-		unsigned long now = millis();	
+
+		unsigned long now = millis();
 		if (now - m_lastTagIdReadMillis < m_sameTagIdTimeout && strcmp(buffer, m_lastCardId) == 0)
 		{
 			m_lastTagIdReadMillis = now;
@@ -183,12 +188,12 @@ void ShpDataRFIDPN532::readTag()
 			ShpIOPort *ioPortBuzzer = app->ioPort(m_portIdBuzzer.c_str());
 			if (ioPortBuzzer)
 			{
-				ioPortBuzzer->onMessage("", "", (byte*)"P50", 3);
+				ioPortBuzzer->onMessage((byte*)"P50", 3, NULL);
 			}
 		}
 
 		app->publish(buffer, m_valueTopic.c_str());
-		//Serial.println(buffer);
+		Serial.println(buffer);
   }
 }
 
@@ -197,7 +202,7 @@ void ShpDataRFIDPN532::loop()
 	ShpIOPort::loop();
 	if (!m_valid || m_paused)
 		return;
-	
+
 	readTag();
 }
 

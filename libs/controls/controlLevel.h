@@ -9,7 +9,7 @@
 #define qsDoIt 2
 #define qsRunning 3
 
-class ShpControlLevel : public ShpIOPort 
+class ShpControlLevel : public ShpIOPort
 {
 	public:
 
@@ -17,7 +17,7 @@ class ShpControlLevel : public ShpIOPort
 
 		virtual void init(JsonVariant portCfg);
 		virtual void loop();
-		virtual void onMessage(const char* topic, const char *subCmd, byte* payload, unsigned int length);
+		virtual void onMessage(byte* payload, unsigned int length, const char* subCmd);
 
 	protected:
 
@@ -41,7 +41,7 @@ class ShpControlLevel : public ShpIOPort
 		int m_queueRequests;
 		QueueItem m_queue[SWITCH_CONTROL_LEVEL_QUEUE_LEN];
 
-		void addQueueItemFromMessage(const char* topic, byte* payload, unsigned int length);
+		void addQueueItemFromMessage(byte* payload, unsigned int length);
 		void addQueueItem(int8_t pinNumber, uint32_t pinValue, unsigned long startAfter);
 		void runQueueItem(int i);
 

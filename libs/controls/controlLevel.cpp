@@ -4,7 +4,7 @@ extern SHP_APP_CLASS *app;
 int8_t g_pwmChannel = 0;
 
 
-ShpControlLevel::ShpControlLevel() : 
+ShpControlLevel::ShpControlLevel() :
 																				m_pin(-1),
 																				m_queueRequests(0)
 {
@@ -44,31 +44,31 @@ void ShpControlLevel::init(JsonVariant portCfg)
 	m_steps = 30;
 
 	m_pwmChannel = g_pwmChannel++;
-	
-	ledcSetup(m_pwmChannel, 5000, 8);
+
+	ledcSetup(m_pwmChannel, 25000, 8);
 	ledcAttachPin(m_pin, m_pwmChannel);
 }
 
-void ShpControlLevel::onMessage(const char* topic, const char *subCmd, byte* payload, unsigned int length)
+void ShpControlLevel::onMessage(byte* payload, unsigned int length, const char* subCmd)
 {
-	addQueueItemFromMessage(topic, payload, length);
+	addQueueItemFromMessage(payload, length);
 }
 
-void ShpControlLevel::addQueueItemFromMessage(const char* topic, byte* payload, unsigned int length)
+void ShpControlLevel::addQueueItemFromMessage(byte* payload, unsigned int length)
 {
 	String payloadStr;
 	for (int i = 0; i < length; i++)
 		payloadStr.concat((char)payload[i]);
-	
+
 	if (payloadStr == "!")
 	{ // ON / OFF
 		if (m_pinValueCurrent == m_pinValueMin)
 			m_pinValueCurrent = m_pinValueLast;
 		else
-			m_pinValueCurrent = m_pinValueMin;		
-	
+			m_pinValueCurrent = m_pinValueMin;
+
 		ledcWrite(m_pwmChannel, m_pinValueCurrent);
-		
+
 		return;
 	}
 
@@ -78,11 +78,11 @@ void ShpControlLevel::addQueueItemFromMessage(const char* topic, byte* payload, 
 
 	char* p;
 	long convertedValue = strtol(payloadStr.c_str(), &p, 10);
-	if (*p) 
+	if (*p)
 	{
-		return;			
+		return;
 	}
-	else 
+	else
 	{
 		//Serial.printf("CONVERTED VALUE: %d", convertedValue);
 		if (convertedValue >= 1 && convertedValue <= m_steps)
@@ -91,7 +91,7 @@ void ShpControlLevel::addQueueItemFromMessage(const char* topic, byte* payload, 
 				pinValue = m_pinValueMin;
 			else if (convertedValue == m_steps)
 				pinValue = m_pinValueMax;
-			else 
+			else
 				pinValue = ((m_pinValueMax - m_pinValueMin)	/ (m_steps - 1)) * (convertedValue - 1);
 
 			valid = true;
@@ -113,12 +113,12 @@ void ShpControlLevel::addQueueItem(int8_t pinNumber, uint32_t pinValue, unsigned
 		if (m_queue[i].qState != qsFree)
 			continue;
 
-		m_queue[i].qState = qsLocked;	
+		m_queue[i].qState = qsLocked;
 		m_queue[i].pinNumber = pinNumber;
 		m_queue[i].pinValue = pinValue;
 		m_queue[i].startAfter = millis() + startAfter;
 
-		m_queue[i].qState = qsDoIt;	
+		m_queue[i].qState = qsDoIt;
 		m_queueRequests++;
 
 		break;
@@ -126,16 +126,16 @@ void ShpControlLevel::addQueueItem(int8_t pinNumber, uint32_t pinValue, unsigned
 }
 
 void ShpControlLevel::runQueueItem(int i)
-{	
+{
 	m_queueRequests--;
-	
+
 	ledcWrite(m_pwmChannel, m_queue[i].pinValue);
 	m_pinValueCurrent = m_queue[i].pinValue;
 	m_pinValueLast = m_pinValueCurrent;
 
 	m_queue[i].qState = qsFree;
 
-	//Serial.printf("=== SET VALUE === %d\n", m_queue[i].pinValue);
+	app->setValue(m_portId, (int)m_queue[i].pinValue, m_sendMode);
 }
 
 void ShpControlLevel::loop()
@@ -149,7 +149,7 @@ void ShpControlLevel::loop()
 	{
 		if (m_queue[i].qState != qsDoIt)
 			continue;
-		
+
 		if (m_queue[i].startAfter > now)
 			continue;
 
@@ -157,6 +157,6 @@ void ShpControlLevel::loop()
 		runQueueItem(i);
 
 		break;
-	}	
+	}
 }
 

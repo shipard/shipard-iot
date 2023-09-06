@@ -1,7 +1,7 @@
 extern SHP_APP_CLASS *app;
 
 
-ShpInputBinary::ShpInputBinary() : 
+ShpInputBinary::ShpInputBinary() :
 																	m_pin(-1),
 																	m_timeout(100),
 																	m_pinExpPortId(NULL),
@@ -46,7 +46,7 @@ void ShpInputBinary::init(JsonVariant portCfg)
 		m_timeout = 100;
 
 	if (portCfg["pin_expPortId"] != nullptr)
-		m_pinExpPortId = portCfg["pin_expPortId"];
+		m_pinExpPortId = portCfg["pin_expPortId"].as<const char*>();
 }
 
 void ShpInputBinary::init2()
@@ -69,10 +69,6 @@ void ShpInputBinary::init2()
 		attachInterrupt(m_pin, std::bind(&ShpInputBinary::onPinChange, this, m_pin), RISING);
 		m_valid = true;
 	}
-}
-
-void ShpInputBinary::onMessage(const char* topic, const char *subCmd, byte* payload, unsigned int length)
-{
 }
 
 void ShpInputBinary::onPinChange(int pin)
@@ -101,7 +97,7 @@ void ShpInputBinary::loop()
 				app->publishAction(m_portId, pv);
 
 			app->publish(pv, m_valueTopic.c_str());
-			
+
 			m_needSend = false;
 			m_lastValue = m_detectedValue;
 			m_waitForChange = true;

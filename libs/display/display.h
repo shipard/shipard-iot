@@ -3,13 +3,13 @@
 
 #define DISPLAY_QUEUE_LEN 8
 
-class ShpDisplay : public ShpIOPort 
+class ShpDisplay : public ShpIOPort
 {
 	public:
 		ShpDisplay();
 
 		virtual void loop();
-		void onMessage(const char* topic, const char *subCmd, byte* payload, unsigned int length);
+		void onMessage(byte* payload, unsigned int length, const char* subCmd);
 
 protected:
 

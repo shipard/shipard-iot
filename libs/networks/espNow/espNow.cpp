@@ -2,17 +2,13 @@
 #include <esp_now.h>
 #endif
 
-#ifdef ESP8266
-#include <espnow.h>
-#endif
-
 
 String shpMacToStr(const uint8_t* mac)
 {
 	char macAddr[13];
 	macAddr[12] = 0;
-	
-	sprintf(macAddr, "%02X%02X%02X%02X%02X%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);		
+
+	sprintf(macAddr, "%02X%02X%02X%02X%02X%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 
 	return String(macAddr);
 }
@@ -22,9 +18,9 @@ void shpStrToMac(const char* str, uint8_t* mac)
 {
 	if(strlen(str) != 12)
 		return;
-		
+
 	char buffer[2];
-	
+
 	for(int i = 0; i < 6; i++)
 	{
 		strncpy ( buffer, str+i*2, 2 );
@@ -114,7 +110,7 @@ void ShpEspNow::sendNextDataPacketItem(int i)
 	packet.dataLen = len;
 
 	//Serial.printf("--- send msg (len: %d) packet %d/%d, len=%d, from=%d ---\n", m_sendQueue[i].data.length(), packet.packetIndex, packet.totalPackets, packet.dataLen, from);
-	
+
 
 
 
@@ -151,7 +147,7 @@ void ShpEspNow::receiveData(const uint8_t *peer_addr, shp_en_packet_t *packet)
 		for (int i = 0; i < SHP_ENRQ_LEN; i++)
 		{
 			if (m_recvQueue[i].state == SHP_ENSQR_NONE)
-			{			
+			{
 				doQueueItem = i;
 				break;
 			}
@@ -167,7 +163,7 @@ void ShpEspNow::receiveData(const uint8_t *peer_addr, shp_en_packet_t *packet)
 			{
 				doQueueItem = i;
 				break;
-			}	
+			}
 		}
 	}
 
@@ -181,7 +177,7 @@ void ShpEspNow::receiveData(const uint8_t *peer_addr, shp_en_packet_t *packet)
 
 	for (int x = 0; x < packet->dataLen; x++)
 		m_recvQueue[doQueueItem].data.concat(packet->data[x]);
-	
+
 	m_recvQueue[doQueueItem].type = packet->type;
 	m_recvQueue[doQueueItem].lastPacketIndex = packet->packetIndex;
 	m_recvQueue[doQueueItem].totalPackets = packet->totalPackets;

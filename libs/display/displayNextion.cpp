@@ -1,6 +1,6 @@
 extern int g_cntUarts;
 
-void dataHexStr(uint8_t* data, size_t len, char str[]) 
+void dataHexStr(uint8_t* data, size_t len, char str[])
 {
 	const char hex_str[]= "0123456789abcdef";
 
@@ -20,7 +20,7 @@ void dataHexStr(uint8_t* data, size_t len, char str[])
 	str[validChars] = 0;
 }
 
-ShpDisplayNextion::ShpDisplayNextion() : 
+ShpDisplayNextion::ShpDisplayNextion() :
 																m_speed(-1),
 																m_mode(0),
 																m_rxPin(-1),
@@ -89,7 +89,7 @@ void ShpDisplayNextion::doCommand(const char *cmd)
 void ShpDisplayNextion::doCommand_Set(const char *itemId, const char *text)
 {
 	String cmd = itemId;
-Serial.printf ("SET `%s` = `%s`\n", itemId, text);
+	//Serial.printf ("SET `%s` = `%s`\n", itemId, text);
 	if (strcmp(itemId, "page") == 0)
 	{
 		cmd += " ";
@@ -114,11 +114,24 @@ Serial.printf ("SET `%s` = `%s`\n", itemId, text);
 	}
 	else
 	{
-		cmd += "=\"";
-		addEscapedText(cmd, text);
-		cmd += "\"";
+		char *subCmd = strchr(itemId, '.');
+		//Serial.println("SUB CMD: ");
+		//Serial.println(subCmd);
+
+		if (subCmd && strcmp(subCmd, ".txt") == 0)
+		{
+			cmd += "=\"";
+			addEscapedText(cmd, text);
+			cmd += "\"";
+		}
+		else
+		{
+			cmd += "=";
+			addEscapedText(cmd, text);
+		}
 	}
 
+	//Serial.println("DO COMMAND: ");
 	//Serial.println(cmd);
 	doCommand (cmd.c_str());
 }
@@ -187,7 +200,7 @@ void ShpDisplayNextion::waitForConfirm()
 	}
 
 	while (m_hwSerial->available())
-	{	
+	{
 		uint8_t c = (char)m_hwSerial->read();
 		if (c == 0x05)
 			Serial.print("!");
@@ -208,7 +221,7 @@ void ShpDisplayNextion::updateFirmware(const char *params)
 		return;
 	}
 
-	
+
 	int spacePos = payload.indexOf(' ');
 	if (spacePos == -1)
 	{
@@ -230,7 +243,7 @@ void ShpDisplayNextion::updateFirmware(const char *params)
 		Serial.printf("Blank firmware url\n");
 		return;
 	}
-	
+
 
 	if (fwLenght == 0 || fwUrl.length() == 0)
 		return;
@@ -344,7 +357,7 @@ void ShpDisplayNextion::setDimLevel(uint8_t level)
 
 void ShpDisplayNextion::runQueueItem(int i)
 {
-	Serial.println("---RUN---");
+	//Serial.println("---RUN---");
 	if (strcmp(m_queue[i].subCmd, "touch-calibration") == 0)
 	{
 		doCommand("touch_j");
@@ -358,9 +371,10 @@ void ShpDisplayNextion::runQueueItem(int i)
 	{
 		if (m_queue[i].payload[0] == '{')
 		{
+			//Serial.println("---JSON!---");
 			StaticJsonDocument<4096> data;
 			DeserializationError error = deserializeJson(data, m_queue[i].payload);
-			if (error) 
+			if (error)
 			{
 				Serial.print(F("deserializeJson() failed: "));
 				Serial.println(error.c_str());
@@ -370,7 +384,7 @@ void ShpDisplayNextion::runQueueItem(int i)
 			JsonObject setItems = data["set"];
 			for (JsonPair oneItem: setItems)
 			{
-				doCommand_Set(oneItem.key().c_str(), oneItem.value().as<char*>());
+				doCommand_Set(oneItem.key().c_str(), oneItem.value().as<const char*>());
 			}
 		}
 		else
@@ -434,7 +448,7 @@ void ShpDisplayNextion::initDisplay()
 	{
 		log(shpllError, "wrong displayType/sn detect: type: `%s`, sn: `%s`", m_displayType.c_str(), m_displaySN.c_str());
 	}
-	
+
 	setDimLevel(0);
 	doCommand("page 0");
 	setDimLevel(m_defaultDimLevel);
@@ -450,6 +464,6 @@ void ShpDisplayNextion::loop()
 
 	if (m_hwSerial->available())
 		readCommandResult();
-	
+
 	ShpDisplay::loop();
 }

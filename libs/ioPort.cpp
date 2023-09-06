@@ -6,14 +6,15 @@ ShpIOPort::ShpIOPort () : m_portId(NULL), m_appPortIndex (0), m_valid(false), m_
 
 void ShpIOPort::init(JsonVariant portCfg)
 {
-	m_portId = portCfg["portId"];
+	m_portId = portCfg["portId"].as<const char*>();
 
 	if (portCfg.containsKey("sendAsAction"))
 		m_sendAsAction = portCfg["sendAsAction"];
 
-	if (portCfg["valueTopic"])
+	//if (portCfg["valueTopic"])
+	if (portCfg.containsKey("valueTopic"))
 	{
-		m_valueTopic = (const char*)portCfg["valueTopic"];
+		m_valueTopic = portCfg["valueTopic"].as<const char*>();
 	}
 	else
 	{
@@ -49,8 +50,9 @@ void ShpIOPort::loop()
 		m_paused = false;
 }
 
-void ShpIOPort::onMessage(const char* topic, const char *subCmd, byte* payload, unsigned int length)
+void ShpIOPort::onMessage(byte* payload, unsigned int length, const char* subCmd)
 {
+	/*
 	if (subCmd && strcmp(subCmd, "pause") == 0)
 	{
 		if (strncmp((const char*)payload, "on", 2) == 0)
@@ -62,7 +64,7 @@ void ShpIOPort::onMessage(const char* topic, const char *subCmd, byte* payload, 
 			if (length > 7)
 			{
 				// TODO: error message
-				return;			
+				return;
 			}
 
 			char b[10];
@@ -74,6 +76,7 @@ void ShpIOPort::onMessage(const char* topic, const char *subCmd, byte* payload, 
 			m_pausedTo = millis() + n;
 		}
 	}
+	*/
 }
 
 void ShpIOPort::shutdown()

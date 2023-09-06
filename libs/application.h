@@ -21,9 +21,9 @@
 #define shpllVerbose 7
 #define shpllALL 7
 
-static const char* const SHP_LOG_LEVEL_NAMES[shpllALL] = 
+static const char* const SHP_LOG_LEVEL_NAMES[shpllALL] =
 {
-	"ERR", 				// shpllError 
+	"ERR", 				// shpllError
 	"STATUS", 		// shpllStatus
 	"WARN", 			// shpllWarning
 	"INFO", 			// shpllInfo
@@ -42,7 +42,19 @@ static const char* const SHP_LOG_LEVEL_NAMES[shpllALL] =
 class ShpModemGSM;
 #endif
 
+#define hbLEDMode_NONE 0
+#define hbLEDMode_BINARY 1
+#define hbLEDMode_PWM 2
+#define hbLEDMode_RGB 3
 
+#define hbLEDStatus_Initializing 				0
+#define hbLEDStatus_NetworkInitialized 	1
+#define hbLEDStatus_NetworkAddressReady 2
+#define hbLEDStatus_WaitForCfg					3
+#define hbLEDStatus_Running							4
+
+#define hbLEDMode_BINARY_STEPS 					2
+#define hbLEDMode_RGB_STEPS 						2
 
 class Application {
 
@@ -53,9 +65,11 @@ class Application {
 		virtual void checks();
 
 		virtual void init();
+		void doIncomingMessage(const char* topic, byte* payload, unsigned int length);
+		virtual void doFwUpgradeRequest(String payload);
 
 		void initIOPorts();
-		void init2IOPorts();
+		virtual void init2IOPorts();
 		void addIOPort(ShpIOPort *ioPort, JsonVariant portCfg);
 		ShpIOPort *ioPort(const char *portId);
 
@@ -63,6 +77,8 @@ class Application {
 		virtual void loadBoxConfig();
 		virtual void loop();
 		virtual void setIotBoxCfg(String data);
+
+		virtual void subscribeIOPortTopic (uint8_t ioPortIndex, const char *topic);
 
 		void addCmdQueueItemFromMessage(const char* commandId, byte* payload, unsigned int length);
 		void addCmdQueueItem(const char *commandId, String payload, unsigned long startAfter);
@@ -85,16 +101,21 @@ class Application {
 		void publishAction(const char *key, const int value);
 		void publishAction(const char *key, const float value);
 
-		void signalLedOn();
-		void signalLedOff();
-		void signalLedBlink(int count);
+		virtual int getDeviceCfg(uint8_t *hwId, String& data) {return -1;}
 
+		void doHBLed();
+		void setHBLedStatus(uint8_t status);
 
 	public:
 
 		uint8_t m_logLevel;
-		int m_pinLed;
-		
+
+		uint8_t m_hbLEDMode;
+		uint8_t m_hbLEDPin;
+		uint8_t m_hbLedStatus;
+		uint8_t m_hbLedStep;
+		unsigned long m_hbLedNextCheck;
+
 		#ifdef SHP_GSM
 		ShpModemGSM *m_modem;
 		#endif
@@ -104,20 +125,22 @@ class Application {
 		String macHostName;
 
 		String m_deviceTopic;
-		String m_deviceSubTopic;
+		//String m_deviceSubTopic;
 
 		StaticJsonDocument<16384> m_boxConfig;
 		boolean m_boxConfigLoaded;
 
 		ShpIOPort **m_ioPorts;
 		uint8_t m_countIOPorts;
+		uint16_t m_routedTopicsCount;
 
 	public:
 
-		uint8_t m_signalLedState;
+		//uint8_t m_signalLedState;
 
 		Preferences m_prefs;
 		String m_deviceId;
+		int16_t m_deviceNdx;
 		String m_logTopic;
 
 		struct CmdQueueItem
@@ -133,8 +156,17 @@ class Application {
 
 protected:
 
-		StaticJsonDocument<4096> m_iotBoxInfo;
+		StaticJsonDocument<8192> m_iotBoxInfo;
 		bool m_publishDataOnNextLoop;
+
+		struct RoutedTopicItem
+		{
+			uint8_t ioPortIndex;
+			const char *topic;
+		};
+		RoutedTopicItem *m_routedTopics;
+
+		Adafruit_NeoPixel *m_hbLed;
 
 };
 

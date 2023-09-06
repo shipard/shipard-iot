@@ -6,14 +6,15 @@
 
 class ShpIOPort {
 	public:
-		
+
 		ShpIOPort();
 
 		virtual void init(JsonVariant portCfg);
 		virtual void init2();
 		void log(uint8_t level, const char* format, ...);
 		virtual void loop();
-		virtual void onMessage(const char* topic, const char *subCmd, byte* payload, unsigned int length);
+		virtual void onMessage(byte* payload, unsigned int length, const char* subCmd);
+		virtual void routeMessage(const char* topic, byte* payload, unsigned int length) {};
 		virtual void shutdown();
 
 	public:
@@ -25,7 +26,7 @@ class ShpIOPort {
 		bool m_valid;
 		bool m_paused;
 		unsigned long m_pausedTo;
-		
+
 		uint8_t m_sendMode;
 		uint8_t m_sendAsAction;
 };

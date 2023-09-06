@@ -1,7 +1,7 @@
 extern SHP_APP_CLASS *app;
 
 
-ShpInputCounter::ShpInputCounter() : 
+ShpInputCounter::ShpInputCounter() :
 																	m_pin(-1),
 																	m_publishCntr(false),
 																	m_publishPPS(false),
@@ -76,10 +76,10 @@ void ShpInputCounter::init(JsonVariant portCfg)
 	if (portCfg.containsKey("publishPPM"))
 		m_publishPPM = portCfg["publishPPM"];
 
-	// -- publishDelta	
+	// -- publishDelta
 	if (portCfg["publishDelta"] != nullptr)
 		m_publishDelta = portCfg["publishDelta"];
-	if (m_publishDelta < 0 || m_publishDelta > 100)	
+	if (m_publishDelta < 0 || m_publishDelta > 100)
 		m_publishDelta = 2;
 
 	// -- useCoef
@@ -98,8 +98,8 @@ void ShpInputCounter::init(JsonVariant portCfg)
 		m_timeoutOnToOff = 1000;
 
 
-	m_valueTopicOn = m_valueTopic + "_ON";	
-	m_valueTopicPPS = m_valueTopic + "_PPS";	
+	m_valueTopicOn = m_valueTopic + "_ON";
+	m_valueTopicPPS = m_valueTopic + "_PPS";
 	m_valueTopicPPM = m_valueTopic + "_PPM";
 
 	m_prefsId = "cv_";
@@ -121,7 +121,7 @@ void ShpInputCounter::onPinChange(int pin)
 	m_valueCurrent++;
 }
 
-void ShpInputCounter::onMessage(const char* topic, const char *subCmd, byte* payload, unsigned int length)
+void ShpInputCounter::onMessage(byte* payload, unsigned int length, const char* subCmd)
 {
 	if (!subCmd || strcmp(subCmd, "set") != 0)
 	{
@@ -186,7 +186,7 @@ void ShpInputCounter::saveValue(shpInputCouter_t value)
 	app->m_prefs.putString(m_prefsId.c_str(), number);
 	app->m_prefs.end();
 
-	m_valueSaved = value;	
+	m_valueSaved = value;
 
 	//Serial.printf("SAVE VALUE: `%s`\n", number);
 }
@@ -200,7 +200,7 @@ void ShpInputCounter::save()
 	if (v == m_valueSaved)
 		return;
 
-	saveValue(v);	
+	saveValue(v);
 }
 
 void ShpInputCounter::send()
@@ -216,7 +216,7 @@ void ShpInputCounter::send()
 	sprintf(number, shpInputCouter_f, v);
 	app->publish(number, m_valueTopic.c_str());
 
-	m_valueSent = v;	
+	m_valueSent = v;
 }
 
 void ShpInputCounter::shutdown()
@@ -267,7 +267,7 @@ void ShpInputCounter::checkPPS()
 		if (m_secsInMin > cntSecsPps)
 			m_secsInMin -= cntSecsPps;
 	}
-	else	
+	else
 		m_secsInMin += cntSecsPps;
 
 	if (m_secsInMin > 60)
@@ -284,12 +284,12 @@ void ShpInputCounter::checkPPS()
 		if (m_useCoef == shpCntrUseCoef_DIVIDE)
 		{
 			pps /= m_coef;
-			ppm /= m_coef;	
+			ppm /= m_coef;
 		}
 		else if (m_useCoef == shpCntrUseCoef_MULTIPLY)
 		{
 			pps *= m_coef;
-			ppm *= m_coef;	
+			ppm *= m_coef;
 		}
 	}
 
@@ -337,7 +337,7 @@ void ShpInputCounter::loop()
 		volatile shpInputCouter_t currentValue = m_valueCurrent;
 		uint8_t onState = ((currentValue == m_lastOnValue) ? 0 : 1);
 		//Serial.printf("currentValue=%lld, lastOnValue=%lld, onState=%d, lastOnState=%d\n", currentValue, m_lastOnValue, (int)onState, (int)m_lastOnState);
-			
+
 		if (onState)
 		{
 			if (m_lastOnState != onState)
@@ -356,7 +356,7 @@ void ShpInputCounter::loop()
 				{
 					app->publish(onState ? "1" : "0", m_valueTopicOn.c_str());
 				}
-				
+
 				m_lastOnState = onState;
 			}
 		}
@@ -374,13 +374,13 @@ void ShpInputCounter::loop()
 
 	if (now > m_nextSendCheck)
 	{
-		send();	
+		send();
 		m_nextSendCheck = now + m_intervalSend;
 	}
 
 	if (now > m_nextSaveCheck)
 	{
-		save();	
+		save();
 		m_nextSaveCheck = now + m_intervalSave;
 	}
 

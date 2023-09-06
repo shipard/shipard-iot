@@ -6,12 +6,6 @@ extern SHP_APP_CLASS *app;
 #include <esp_now.h>
 #endif
 
-#ifdef ESP8266
-#include <ESP8266WiFi.h>
-#include <espnow.h>
-#endif
-
-
 
 
 ShpEspNowServer *g_espServer = NULL;
@@ -24,7 +18,7 @@ void espNowServerOnPaired(uint8_t *ga, String ad)
 {
   Serial.println("EspNowConnection : Client '"+ad+"' paired! ");
 
-  g_espNow->endPairing();  
+  g_espNow->endPairing();
 }
 
 void espNowServerOnConnected(uint8_t *ga, String ad)
@@ -33,7 +27,7 @@ void espNowServerOnConnected(uint8_t *ga, String ad)
 }
 */
 
-void espNowServerOnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) 
+void espNowServerOnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status)
 {
   Serial.print("Last Packet Send Status: ");
   Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
@@ -47,10 +41,10 @@ static esp_now_peer_info_t espNowServerPeerInfo;
 
 /**
  * ShpEspNowServer
- * 
+ *
  */
 
-ShpEspNowServer::ShpEspNowServer() : 
+ShpEspNowServer::ShpEspNowServer() :
 																			m_pairingStatus(SHP_ENSPS_NONE),
 																			m_pairingCounter(0),
 																			m_pairingNextTry(0),
@@ -68,7 +62,7 @@ void ShpEspNowServer::init()
   if (esp_now_init() != ESP_OK) {
     Serial.println("Error initializing ESP-NOW");
     return;
-  }	
+  }
 
 	esp_now_register_send_cb(espNowServerOnDataSent);
 	esp_now_register_recv_cb(ShpEspNowServer::espNowServerOnDataRecv);
@@ -113,7 +107,7 @@ void ShpEspNowServer::pairingNextTry()
 	esp_now_del_peer(m_pairingMac);
 }
 
-void ShpEspNowServer::espNowServerOnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len) 
+void ShpEspNowServer::espNowServerOnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len)
 {
 	shp_en_packet_t packet;
   memcpy(&packet, incomingData, len);
@@ -154,7 +148,7 @@ void ShpEspNowServer::espNowServerOnDataRecv(const uint8_t * mac, const uint8_t 
 			g_espServer->m_sendDeviceCfgId = payloadStr;
 			g_espServer->m_sendDeviceMac = shpMacToStr(mac);
 			g_espServer->m_sendDeviceCfg = true;
-		}	
+		}
 		return;
 	}
 
@@ -187,7 +181,7 @@ void ShpEspNowServer::sendDeviceCfg()
 
   Serial.print("[HTTP] begin");
 	http.setTimeout(5);
-  if (http.begin(client, url)) 
+  if (http.begin(client, url))
   {
     Serial.print("[HTTP] GET...");
     int httpCode = http.GET();
@@ -200,12 +194,12 @@ void ShpEspNowServer::sendDeviceCfg()
       {
         data = http.getString();
       }
-      else 
+      else
       {
         Serial.printf("[HTTP] GET... failed, error: %s", http.errorToString(httpCode).c_str());
       }
-    } 
-    else 
+    }
+    else
     {
       Serial.printf("[HTTP] Unable to connect");
     }
@@ -249,7 +243,7 @@ void ShpEspNowServer::loop()
 		if (now > m_pairingNextTry)
 		{
 			pairingNextTry();
-		}	
+		}
 	}
 	if (m_sendDeviceCfg)
 	{
@@ -262,7 +256,7 @@ void ShpEspNowServer::loop()
 
 /**
  * ShpEspNowServerIOPort
- * 
+ *
  */
 
 ShpEspNowServerIOPort::ShpEspNowServerIOPort() : m_espNowServer(NULL)
@@ -277,7 +271,7 @@ void ShpEspNowServerIOPort::init(JsonVariant portCfg)
 	m_espNowServer->init();
 }
 
-void ShpEspNowServerIOPort::onMessage(const char* topic, const char *subCmd, byte* payload, unsigned int length)
+void ShpEspNowServerIOPort::onMessage(byte* payload, unsigned int length, const char* subCmd)
 {
 	String payloadStr;
 	for (int i = 0; i < length; i++)

@@ -4,7 +4,7 @@
 #define IBMODE_INT 0
 #define IBMODE_GPIO_EXP 1
 
-class ShpInputBinary : public ShpIOPort 
+class ShpInputBinary : public ShpIOPort
 {
 	public:
 
@@ -13,7 +13,6 @@ class ShpInputBinary : public ShpIOPort
 		virtual void init(JsonVariant portCfg);
 		virtual void init2();
 		virtual void loop();
-		virtual void onMessage(const char* topic, const char *subCmd, byte* payload, unsigned int length);
 		void setValue(int8_t value);
 
 	protected:
@@ -26,7 +25,7 @@ class ShpInputBinary : public ShpIOPort
 		#endif
 		int8_t m_inputMode;
 		uint8_t m_detectedValue;
-		
+
 		int8_t m_lastValue;
 		unsigned long m_lastChangeMillis;
 		boolean m_disable;
@@ -35,7 +34,7 @@ class ShpInputBinary : public ShpIOPort
 
 
 	protected:
-		
+
 		void onPinChange(int pin);
 
 };

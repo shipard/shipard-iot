@@ -9,10 +9,12 @@ class ApplicationLan : public Application
 		ApplicationLan();
 
 		virtual void init();
+		virtual void init2IOPorts();
 		virtual void checks();
 		virtual void setup();
 		virtual void loop();
 
+		virtual void doFwUpgradeRequest(String payload);
 		virtual boolean publish(const char *payload, const char *topic = NULL);
 		virtual void publishData(uint8_t sendMode);
 
@@ -26,6 +28,8 @@ class ApplicationLan : public Application
 		void initNetworkInfo();
 		void IP_Got();
 		void IP_Lost();
+
+		virtual int getDeviceCfg(uint8_t *hwId, String& data);
 
 	public:
 

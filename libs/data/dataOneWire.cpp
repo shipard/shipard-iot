@@ -26,7 +26,7 @@ void ShpDataOneWire::init(JsonVariant portCfg)
 	ShpIOPort::init(portCfg);
 
 	// -- pin
-	if (portCfg["pin"] != nullptr)
+	if (portCfg.containsKey("pin"))
 		m_pin = portCfg["pin"];
 
 	if (m_pin < 0)
@@ -35,7 +35,6 @@ void ShpDataOneWire::init(JsonVariant portCfg)
 	m_oneWire = new OneWire(m_pin);
 	scan();
 	m_sensors = new DallasTemperature(m_oneWire);
-
 
 	scanDevices();
 }

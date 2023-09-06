@@ -19,11 +19,6 @@
 #include <Update.h>
 #endif
 
-#ifdef ESP8266
-#include <EEPROM.h>
-#include <ESP8266WebServer.h>
-#include <Updater.h>
-#endif
 
 //#include <WebServer.h>
 //#include <DNSServer.h>
@@ -57,7 +52,7 @@ void setup()
 }
 
 void loop()
-{  
+{
   app->loop();
 }
 

@@ -11,24 +11,14 @@
 #ifdef ESP32
 #include <HTTPClient.h>
 #endif
-#ifdef ESP8266
-ESP8266HTTPClient.h
-#endif
 
 #include <PubSubClient.h>
-#include <ArduinoJson.h>
+
 #ifdef ESP32
 #include <Preferences.h>
 #include <WebServer.h>
 #include <Update.h>
 #endif
-
-#ifdef ESP8266
-#include <EEPROM.h>
-#include <ESP8266WebServer.h>
-#include <Updater.h>
-#endif
-
 
 #include <DNSServer.h>
 
@@ -49,6 +39,10 @@ ESP8266HTTPClient.h
 
 #include <Wire.h>
 
+#define ARDUINOJSON_ENABLE_STD_STRING 0
+#define ARDUINOJSON_ENABLE_ARDUINO_STRING 1
+
+#include <ArduinoJson.h>
 #include <bootstrap.h>
 #include <applicationLan.h>
 
@@ -57,6 +51,7 @@ ApplicationLan *app = new ApplicationLan();
 
 void setup()
 {
+  Serial.println ("--main-setup--");
   app->setup();
 }
 

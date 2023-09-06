@@ -13,7 +13,7 @@
 #define shpCntrUseCoef_DIVIDE 1
 #define shpCntrUseCoef_MULTIPLY 2
 
-class ShpInputCounter : public ShpIOPort 
+class ShpInputCounter : public ShpIOPort
 {
 	public:
 
@@ -21,7 +21,7 @@ class ShpInputCounter : public ShpIOPort
 
 		virtual void init(JsonVariant portCfg);
 		virtual void loop();
-		virtual void onMessage(const char* topic, const char *subCmd, byte* payload, unsigned int length);
+		virtual void onMessage(byte* payload, unsigned int length, const char* subCmd);
 		virtual void shutdown();
 
 	protected:
@@ -70,7 +70,7 @@ class ShpInputCounter : public ShpIOPort
 		String m_prefsId;
 
 	protected:
-		
+
 		void checkPPS();
 		void onPinChange(int pin);
 		shpInputCouter_t loadValue();

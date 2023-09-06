@@ -1,4 +1,4 @@
-ShpDisplay::ShpDisplay() : 
+ShpDisplay::ShpDisplay() :
 											m_queueRequests(0)
 {
 	for (int i = 0; i < DISPLAY_QUEUE_LEN; i++)
@@ -9,7 +9,7 @@ ShpDisplay::ShpDisplay() :
 	}
 }
 
-void ShpDisplay::onMessage(const char* topic, const char *subCmd, byte* payload, unsigned int length)
+void ShpDisplay::onMessage(byte* payload, unsigned int length, const char* subCmd)
 {
 	addQueueItem(subCmd, payload, length, 10);
 }
@@ -21,7 +21,7 @@ void ShpDisplay::addQueueItem(const char *subCmd, byte* payload, unsigned int le
 		if (m_queue[i].qState != qsFree)
 			continue;
 
-		m_queue[i].qState = qsLocked;	
+		m_queue[i].qState = qsLocked;
 		m_queue[i].startAfter = millis() + startAfter;
 
 		if (subCmd)
@@ -33,7 +33,7 @@ void ShpDisplay::addQueueItem(const char *subCmd, byte* payload, unsigned int le
 		for (int c = 0; c < length; c++)
 			m_queue[i].payload.concat((char)payload[c]);
 
-		m_queue[i].qState = qsDoIt;	
+		m_queue[i].qState = qsDoIt;
 		m_queueRequests++;
 
 		break;
@@ -51,7 +51,7 @@ void ShpDisplay::loop()
 	{
 		if (m_queue[i].qState != qsDoIt)
 			continue;
-		
+
 		if (m_queue[i].startAfter > now)
 			continue;
 
@@ -59,13 +59,13 @@ void ShpDisplay::loop()
 		runQueueItem(i);
 
 		break;
-	}	
+	}
 
 	ShpIOPort::loop();
 }
 
 void ShpDisplay::runQueueItem(int i)
-{	
+{
 	m_queueRequests--;
 	m_queue[i].qState = qsFree;
 }

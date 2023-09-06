@@ -4,8 +4,8 @@ extern SHP_APP_CLASS *app;
 int g_cntI2C = 1;
 
 
-ShpBusI2C::ShpBusI2C() : 
-												m_pinSDA(-1), 
+ShpBusI2C::ShpBusI2C() :
+												m_pinSDA(-1),
 												m_pinSCL(-1),
 												m_wire(NULL)
 {
@@ -37,8 +37,9 @@ void ShpBusI2C::init(JsonVariant portCfg)
 	//Serial.printf("I2C START: sda: %d, scl: %d\n", m_pinSDA, m_pinSCL);
 
 	m_wire = new TwoWire(g_cntI2C++);
-	m_wire->begin(m_pinSDA, m_pinSCL/*, 100000*/);
+	m_wire->begin(m_pinSDA, m_pinSCL, 100000L);
 
+	//delay(250);
 	scan();
 }
 
@@ -49,11 +50,11 @@ void ShpBusI2C::scan()
 	byte error;
   int cntDevices = 0;
 
-  for (int address = 1; address < 127; address++ ) 
+  for (int address = 1; address < 127; address++ )
 	{
     m_wire->beginTransmission (address);
     error = m_wire->endTransmission ();
-    if (error == 0) 
+    if (error == 0)
 		{
 			sprintf (addrHex, "0x%02x", address);
 			if (cntDevices)
@@ -61,18 +62,20 @@ void ShpBusI2C::scan()
 			m_devices.concat (addrHex);
       cntDevices++;
     }
-    else if (error == 4) 
+    else if (error == 4)
 		{
 			log(shpllError, "[I2C] Unknow error at address %02x", address);
-    }   
+    }
   }
-  if (cntDevices == 0) 
+  if (cntDevices == 0)
 	{
 		log(shpllError, "No I2C devices found");
   }
-  else 
+  else
 	{
-		log(shpllDebug, "I2C devices: %s", m_devices.c_str());	
+		log(shpllDebug, "I2C devices: %s", m_devices.c_str());
+
+		Serial.printf("####### I2C devices: %s \n", m_devices.c_str());
 	}
 }
 

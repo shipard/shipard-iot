@@ -2,10 +2,10 @@ extern SHP_APP_CLASS *app;
 extern int g_cntUarts;
 
 
-ShpMODRfid1356Mifare::ShpMODRfid1356Mifare() : 
+ShpMODRfid1356Mifare::ShpMODRfid1356Mifare() :
 																							m_speed(38400),
 																							m_mode(SERIAL_8N1),
-																							m_rxPin(-1), 
+																							m_rxPin(-1),
 																							m_txPin(-1),
 																							m_revertCode(true),
 																							m_hwSerial(NULL)
@@ -62,7 +62,7 @@ void ShpMODRfid1356Mifare::loop()
 	if (!m_hwSerial)
 		return;
 
-	while (m_hwSerial->available()) 
+	while (m_hwSerial->available())
 	{
 		char c = (char)m_hwSerial->read();
 
@@ -91,7 +91,7 @@ void ShpMODRfid1356Mifare::loop()
 			//Serial.println(m_buffer);
 			sendData(m_buffer);
 		}
-		
+
 		m_bufNeedSend = 0;
 		m_sbCnt = 0;
 		m_buffer[0] = 0;
@@ -124,7 +124,7 @@ void ShpMODRfid1356Mifare::sendData(const char *data)
 		code += data + 1;
 	}
 
-	unsigned long now = millis();	
+	unsigned long now = millis();
 	if (now - m_lastTagIdReadMillis < m_sameTagIdTimeout && strcmp(code.c_str(), m_lastCardId) == 0)
 	{
 		m_lastTagIdReadMillis = now;
@@ -133,13 +133,13 @@ void ShpMODRfid1356Mifare::sendData(const char *data)
 
 	strcpy(m_lastCardId, code.c_str());
 	m_lastTagIdReadMillis = now;
-	
+
 	if (m_portIdBuzzer != "")
 	{
 		ShpIOPort *ioPortBuzzer = app->ioPort(m_portIdBuzzer.c_str());
 		if (ioPortBuzzer)
 		{
-			ioPortBuzzer->onMessage("", "", (byte*)"P50", 3);
+			ioPortBuzzer->onMessage((byte*)"P50", 3, NULL);
 		}
 	}
 

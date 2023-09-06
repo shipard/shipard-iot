@@ -11,7 +11,7 @@
 #define dgaCall 2
 
 
-class ShpDataGSM : public ShpIOPort 
+class ShpDataGSM : public ShpIOPort
 {
 	public:
 
@@ -20,7 +20,7 @@ class ShpDataGSM : public ShpIOPort
 		virtual void init(JsonVariant portCfg);
 		virtual void loop();
 
-		virtual void onMessage(const char* topic, const char *subCmd, byte* payload, unsigned int length);
+		virtual void onMessage(byte* payload, unsigned int length, const char* subCmd);
 		void addQueueItem(int8_t action, const char *phoneNumber, String text);
 
 	protected:
