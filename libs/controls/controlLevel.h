@@ -22,6 +22,8 @@ class ShpControlLevel : public ShpIOPort
 	protected:
 
 		int8_t m_pin;
+		uint32_t m_defaultValue;
+		uint8_t m_startMax;
 		int8_t m_pwmChannel;
 		uint32_t m_pinValueMin;
 		uint32_t m_pinValueMax;

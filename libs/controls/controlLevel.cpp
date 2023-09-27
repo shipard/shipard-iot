@@ -5,8 +5,10 @@ int8_t g_pwmChannel = 0;
 
 
 ShpControlLevel::ShpControlLevel() :
-																				m_pin(-1),
-																				m_queueRequests(0)
+																			m_pin(-1),
+																			m_defaultValue(0),
+																			m_startMax(0),
+																			m_queueRequests(0)
 {
 	for (int i = 0; i < SWITCH_CONTROL_QUEUE_LEN; i++)
 	{
@@ -31,7 +33,7 @@ void ShpControlLevel::init(JsonVariant portCfg)
 	ShpIOPort::init(portCfg);
 
 	// -- pin
-	if (portCfg["pin"] != nullptr)
+	if (portCfg.containsKey("pin"))
 		m_pin = portCfg["pin"];
 
 	if (m_pin < 0)
@@ -43,10 +45,29 @@ void ShpControlLevel::init(JsonVariant portCfg)
 	m_pinValueLast = m_pinValueCurrent;
 	m_steps = 30;
 
+	if (portCfg.containsKey("defaultValue"))
+	{
+		int perc = portCfg["defaultValue"];
+		m_defaultValue = (((m_pinValueMax - m_pinValueMin) / 100.0) * perc) + m_pinValueMin;
+	}
+	if (portCfg.containsKey("startMax"))
+		m_startMax = portCfg["startMax"];
+
 	m_pwmChannel = g_pwmChannel++;
 
 	ledcSetup(m_pwmChannel, 25000, 8);
 	ledcAttachPin(m_pin, m_pwmChannel);
+
+	if (m_defaultValue)
+	{
+		if (m_startMax)
+		{
+			addQueueItem(m_pin, m_pinValueMax, 100);
+			addQueueItem(m_pin, m_defaultValue, 3500);
+		}
+		else
+			addQueueItem(m_pin, m_defaultValue, 100);
+	}
 }
 
 void ShpControlLevel::onMessage(byte* payload, unsigned int length, const char* subCmd)
