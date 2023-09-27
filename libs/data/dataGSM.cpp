@@ -9,6 +9,11 @@ ShpDataGSM::ShpDataGSM() :
 														m_mode(0),
 														m_rxPin(-1),
 														m_txPin(-1),
+														m_powerOnPin(-1),
+														m_needPowerOn(0),
+														m_dualSIM(0),
+														m_SIMActive(0),
+														m_SIMIncoming(0),
 														m_incomingCallMaxRings(8),
 														m_outgoingCallMaxSecs(60),
 														m_checkInterval(250),
@@ -64,27 +69,39 @@ void ShpDataGSM::init(JsonVariant portCfg)
 	m_mode = SERIAL_MODE_MAP[mode];
 
 	// -- rx / tx pin
-	if (portCfg["pinRX"] != nullptr)
+	if (portCfg.containsKey("pinRX"))
 		m_rxPin = portCfg["pinRX"];
-	if (portCfg["pinTX"] != nullptr)
+	if (portCfg.containsKey("pinTX"))
 		m_txPin = portCfg["pinTX"];
+
+	if (portCfg.containsKey("powerOn"))
+		m_needPowerOn = portCfg["powerOn"];
+
+	if (portCfg.containsKey("pinPowerOn"))
+		m_powerOnPin = portCfg["pinPowerOn"];
+
+	if (portCfg.containsKey("dualSIM"))
+		m_dualSIM = portCfg["dualSIM"];
+
+	if (m_dualSIM)
+	{
+		if (portCfg.containsKey("sim1Id"))
+			m_valueTopicSIM1 = m_valueTopic + "-" + (const char*)portCfg["sim1Id"];
+		if (portCfg.containsKey("sim2Id"))
+			m_valueTopicSIM2 = m_valueTopic + "-" + (const char*)portCfg["sim2Id"];
+	}
 
 	if (m_txPin < 0 || m_rxPin < 0 || m_speed < 1 || m_mode < 1)
 	{
-		log (shpllError, "invalid configuration");
+		log (shpllError, "invalid serial port configuration");
 		return;
 	}
 
-	//delay(5000);
-
-	pinMode(27, OUTPUT);
-	digitalWrite(27, HIGH);
-	Serial.println("START: ");
-	Serial.println(millis());
-	delay(1000);
-	Serial.println("STOP: ");
-	Serial.println(millis());
-	digitalWrite(27, LOW);
+	if (m_needPowerOn && m_powerOnPin < 0)
+	{
+		log (shpllError, "invalid powerOn pin configuration");
+		return;
+	}
 
 	log(shpllDebug, "configured: pinRX=%d, pinTX=%d, speed=%d, mode=%x", m_rxPin, m_txPin, m_speed, m_mode);
 
@@ -106,7 +123,7 @@ void ShpDataGSM::onMessage(byte* payload, unsigned int length, const char* subCm
 		action = dgaCall;
 	else if (strcmp(subCmd, "hangup") == 0)
 	{
-		hangup();
+		hangup(1);
 		return;
 	}
 
@@ -224,82 +241,6 @@ bool ShpDataGSM::sendCmd(const char* cmd, const char *expectedResult /* = NULL *
 	return true;
 }
 
-/*
-bool ShpDataGSM::readResponseOLD()
-{
-	bool waitForAll = true;
-
-	m_responseCharPosition = 0;
-	m_responseRows = 0;
-	m_response[0][0] = 0;
-	int responseBytes = 0;
-	int totalResponseBytes = 0;
-
-	unsigned long now = millis();
-	unsigned long timeout = 3000; // 3 secs
-
-	while (!responseBytes)
-	{
-		while (m_hwSerial->available())
-		{
-			char c = (char)m_hwSerial->read();
-			responseBytes++;
-			totalResponseBytes++;
-			now = millis();
-			if (c == 13)
-				continue; // \r
-			if (c == 10)
-			{ // \n
-				//if (m_responseCharPosition == 0)
-				//	continue; // blank line
-				m_responseRows++;
-				m_responseCharPosition = 0;
-				m_response[m_responseRows][m_responseCharPosition] = 0;
-
-				if (m_responseRows >= 2 && m_response[m_responseRows - 1][0] == 0 && strcmp(m_response[m_responseRows - 2], "OK") == 0)
-					break;
-
-				continue;
-			}
-
-			m_response[m_responseRows][m_responseCharPosition++] = c;
-			m_response[m_responseRows][m_responseCharPosition] = 0;
-
-			if (m_responseCharPosition == MAX_DATA_GSM_SERIAL_BUF_LEN)
-			{
-				m_responseRows++;
-				m_responseCharPosition = 0;
-				m_response[m_responseRows][m_responseCharPosition] = 0;
-			}
-
-			if (m_responseRows == MAX_DATA_GSM_SERIAL_RESPONSE_ROWS)
-			{
-				break;
-			}
-		}
-
-		if (waitForAll && m_response[m_responseRows][0] != 0 && strcmp(m_response[m_responseRows - 1], "OK") != 0)
-			responseBytes = 0;
-
-		unsigned long timeLen = millis() - now;
-
-		if (timeLen > timeout)
-		{
-			log (shpllDebug, "ShpDataGSM::readResponse timeout");
-			break;
-		}
-	}
-
-	if (m_responseRows || m_responseCharPosition)
-	{
-		//printResponse();
-		return true;
-	}
-
-	return false;
-}
-*/
-
 bool ShpDataGSM::readResponse()
 {
 	//Serial.println("RRBegin");
@@ -405,6 +346,21 @@ void ShpDataGSM::initGSMModule()
 	{
 		log (shpllError, "ShpDataGSM::initGSMModule: module not working");
 		printResponse();
+
+		if (m_needPowerOn)
+		{
+			pinMode(m_powerOnPin, OUTPUT);
+			digitalWrite(m_powerOnPin, HIGH);
+			Serial.println("POWER ON BEGIN: ");
+			Serial.println(millis());
+			delay(1000);
+			Serial.println("POWER ON END: ");
+			Serial.println(millis());
+			digitalWrite(m_powerOnPin, LOW);
+
+			m_needPowerOn = 0;
+		}
+
 		return;
 	}
 	//printResponse();
@@ -416,18 +372,6 @@ void ShpDataGSM::initGSMModule()
 			log (shpllDebug, m_response[1]);
 	}
 
-	/*
-	Serial.println("Init DUAL SIM....");
-	while (!sendCmd("AT+CIURC=1", "OK"))
-	{
-		log (shpllError, "ShpDataGSM::initGSMModule: DUAL sim not working...");
-		printResponse();
-
-		break;
-	}
-	*/
-
-
 	delay(200);
 	log(shpllDebug, "check network...");
 	while (!sendCmd("AT+CREG?", "+CREG: 0,1"))
@@ -437,16 +381,6 @@ void ShpDataGSM::initGSMModule()
 		return;
 	}
 	//printResponse();
-
-	/*
-	delay(200);
-	while (!sendCmd("AT+CREGDS?", "+CREGDS: 0,1"))
-	{
-		log (shpllStatus, "wait for DUAL gsm signal");
-		printResponse();
-		//return;
-	}
-	*/
 
 	delay(200);
 	log(shpllDebug, "check operator...");
@@ -583,10 +517,27 @@ bool ShpDataGSM::call (const char *number)
 	return true;
 }
 
-void ShpDataGSM::hangup()
+void ShpDataGSM::setActiveSIM(int8_t SIMNumber)
 {
-	//Serial.println ("HANG-FUNC");
-	if (!sendCmd("ATH", "OK"))
+	if (m_SIMActive == SIMNumber)
+		return;
+
+	char cmd[20] = "AT+CDSDS=";
+	itoa(SIMNumber, cmd + 9, 10);
+
+	if (!sendCmd(cmd, "OK"))
+	{
+		printResponse();
+	}
+
+	m_SIMActive = SIMNumber;
+}
+
+void ShpDataGSM::hangup(uint8_t reason)
+{
+	setActiveSIM(m_SIMIncoming);
+
+	if (!sendCmd("ATH+CHUP", "OK"))
 	{
 		//Serial.println("hangup failed....");
 		//printResponse();
@@ -735,7 +686,7 @@ bool ShpDataGSM::checkIncomingCall()
 
 	if (m_incomingCallRingInProgress > m_incomingCallMaxRings)
 	{
-		hangup();
+		hangup(2);
 		return true;
 	}
 
@@ -744,7 +695,7 @@ bool ShpDataGSM::checkIncomingCall()
 		if (m_incomingCallRingInProgress)
 		{
 			//Serial.println ("ghost ring1...");
-			m_incomingCallRingInProgress++;
+			//m_incomingCallRingInProgress++;
 			return true;
 			//Serial.println ("hangup 01...");
 			//sleep(300);
@@ -779,16 +730,29 @@ bool ShpDataGSM::checkIncomingCall()
 		return false;
 	}
 
-	if (strcmp(m_response[0], "RING") != 0 && strcmp(m_response[1], "RING") != 0)
+	int8_t responseRow = -1;
+	if (strncmp(m_response[0], "RING", 4) == 0)
+		responseRow = 0;
+	else if (strncmp(m_response[1], "RING", 4) == 0)
+		responseRow = 1;
+
+	if (responseRow == -1)
 		return false;
+
+	if (m_dualSIM)
+	{
+		m_SIMIncoming = 1;
+		if (strcmp(m_response[responseRow], "RINGDS") == 0)
+			m_SIMIncoming = 2;
+	}
 
 	for (int i = 0; i <= m_responseRows; i++)
 	{
-		if (strncmp(m_response[i], "+CLIP: ", 7))
+		if (strncmp(m_response[i], "+CLIP", 5))
 			continue;
 
 		char phoneNumber[MAX_PHONE_NUMBER_LEN] = "";
-		if (searchPhoneNumber(m_response[i] + 6, phoneNumber))
+		if (searchPhoneNumber(m_response[i] + 5, phoneNumber))
 		{
 			m_incomingCallRingInProgress += 4;
 
@@ -805,10 +769,15 @@ bool ShpDataGSM::checkIncomingCall()
 			payload.concat(phoneNumber);
 			payload.concat("\"}");
 
-			app->publish(payload.c_str(), m_valueTopic.c_str());
-
-			//Serial.println ("HANGUP 3");
-			//hangup();
+			if (m_dualSIM)
+			{
+				if (m_SIMIncoming == 2)
+					app->publish(payload.c_str(), m_valueTopicSIM2.c_str());
+				else
+					app->publish(payload.c_str(), m_valueTopicSIM1.c_str());
+			}
+			else
+				app->publish(payload.c_str(), m_valueTopic.c_str());
 
 			return true;
 		}
@@ -829,7 +798,7 @@ bool ShpDataGSM::checkOutgoingCall()
 	if (callLen > m_outgoingCallMaxSecs)
 	{
 		//Serial.println("OC HANGUP1");
-		hangup();
+		hangup(3);
 		m_outgoingCallInProgress = false;
 		m_outgoingCallStartedAt = 0;
 	}

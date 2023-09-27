@@ -37,7 +37,8 @@ class ShpDataGSM : public ShpIOPort
 		bool checkIncomingSMS();
 		bool checkOutgoingCall();
 
-		void hangup();
+		void setActiveSIM(int8_t SIMNumber);
+		void hangup(uint8_t reason);
 		bool sendSMS (const char *number, const char *text);
 		bool call (const char *number);
 
@@ -51,6 +52,11 @@ class ShpDataGSM : public ShpIOPort
 		uint32_t m_mode;
 		int8_t m_rxPin;
 		int8_t m_txPin;
+		int8_t m_powerOnPin;
+		int8_t m_needPowerOn;
+		int8_t m_dualSIM;
+		int8_t m_SIMActive;
+		int8_t m_SIMIncoming;
 		int m_incomingCallMaxRings;
 		int m_outgoingCallMaxSecs;
 
@@ -85,6 +91,9 @@ class ShpDataGSM : public ShpIOPort
 
 		int m_queueRequests;
 		QueueItem m_queue[DATA_GSM_QUEUE_LEN];
+
+		String m_valueTopicSIM1;
+		String m_valueTopicSIM2;
 };
 
 
