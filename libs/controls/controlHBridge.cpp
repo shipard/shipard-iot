@@ -117,6 +117,7 @@ void ShpControlHBridge::setState(uint8_t state)
 	{
 		setPinState1(LOW);
 		setPinState2(LOW);
+		app->setValue(m_portId, "0", m_sendMode);
 	}
 	else if (state == 1)
 	{
@@ -127,6 +128,8 @@ void ShpControlHBridge::setState(uint8_t state)
 			digitalWrite(m_pinLed, LOW);
 		else if (m_ledMode == HBRIDGE_LEDMODE_PWM)
 			ledcWrite(m_pwmChannel, 0);
+
+		app->setValue(m_portId, "1", m_sendMode);
 	}
 	else if (state == 2)
 	{
@@ -137,6 +140,8 @@ void ShpControlHBridge::setState(uint8_t state)
 			digitalWrite(m_pinLed, HIGH);
 		else if (m_ledMode == HBRIDGE_LEDMODE_PWM)
 			ledcWrite(m_pwmChannel, m_ledBr);
+
+		app->setValue(m_portId, "2", m_sendMode);
 	}
 	else
 	{
