@@ -39,6 +39,7 @@ class ApplicationLan : public Application
 		#endif
 
 		boolean m_networkInfoInitialized;
+		unsigned long m_mqttReconnectAttempAfter;
 		static bool eth_connected;
 		IPAddress ipLocal;
 

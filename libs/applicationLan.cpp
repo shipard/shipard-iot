@@ -91,7 +91,8 @@ ApplicationLan::ApplicationLan() :
 																		#ifdef SHP_MQTT
 																		mqttClient (NULL),
 																		#endif
-																		m_networkInfoInitialized(false)
+																		m_networkInfoInitialized(false),
+																		m_mqttReconnectAttempAfter(0)
 {
 }
 
@@ -187,12 +188,13 @@ void ApplicationLan::checkMqtt()
 	id.concat(rand());
 	*/
 
+	setHBLedStatus(hbLEDStatus_WaitForCfg);
+
 	mqttClient->connect((const char*)m_boxConfig["deviceId"], m_logTopic.c_str(), 0, 0, "disconnect");
 
 	if (!mqttClient->connected())
 	{
-		setHBLedStatus(hbLEDStatus_WaitForCfg);
-		sleep(100);
+		m_mqttReconnectAttempAfter = millis() + 5000;
 		return;
 	}
 
@@ -210,6 +212,9 @@ void ApplicationLan::checkMqtt()
 		st.concat ("/#");
 		mqttClient->subscribe(st.c_str());
 	}
+
+	setHBLedStatus(hbLEDStatus_Running);
+	m_mqttReconnectAttempAfter = 0;
 
 	iotBoxInfo();
 }
@@ -484,7 +489,14 @@ void ApplicationLan::doFwUpgradeRequest(String payload)
 void ApplicationLan::loop()
 {
 	#ifdef SHP_MQTT
-  mqttClient->loop();
+  if (!mqttClient->loop())
+	{
+		if (m_hbLedStatus != hbLEDStatus_WaitForCfg)
+			setHBLedStatus(hbLEDStatus_WaitForCfg);
+
+		if (m_mqttReconnectAttempAfter && m_mqttReconnectAttempAfter > millis())
+			checkMqtt();
+	}
 	#endif
 
 	Application::loop();
