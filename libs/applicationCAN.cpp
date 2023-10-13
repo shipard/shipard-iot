@@ -52,7 +52,7 @@ void ApplicationCAN::publishData(uint8_t sendMode)
 	String payload;
 	serializeJson(m_iotBoxInfo, payload);
 
-	app->publish(payload.c_str(), m_deviceTopic.c_str());
+	app->publish(payload.c_str(), m_actionTopic.c_str());
 }
 
 void ApplicationCAN::loop()

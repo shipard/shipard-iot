@@ -125,6 +125,7 @@ class Application {
 		String macHostName;
 
 		String m_deviceTopic;
+		String m_actionTopic;
 		//String m_deviceSubTopic;
 
 		StaticJsonDocument<16384> m_boxConfig;

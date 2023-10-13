@@ -719,6 +719,9 @@ void ShpRouterCAN::routeMessage(const char* topic, byte* payload, unsigned int l
 
   for (int i = 0; i < m_devicesCount; i++)
   {
+    if (strlen(topic) < strlen(m_devices[i].topic))
+      continue;
+
     if (strncmp(m_devices[i].topic, topic, strlen(m_devices[i].topic)) == 0)
     {
       toDeviceNdx = i;

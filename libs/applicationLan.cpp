@@ -461,13 +461,13 @@ void ApplicationLan::publishData(uint8_t sendMode)
 	{
 		boolean res = false;
 
-		res = mqttClient->publish(m_deviceTopic.c_str(), payload.c_str(), false);
+		res = mqttClient->publish(m_actionTopic.c_str(), payload.c_str(), false);
 
 		if (!res)
 		{
 			//Serial.println("PUBLISH FAILED!!!");
 			checkMqtt();
-			res = mqttClient->publish(m_deviceTopic.c_str(), payload.c_str(), false);
+			res = mqttClient->publish(m_actionTopic.c_str(), payload.c_str(), false);
 		}
 
 		return;

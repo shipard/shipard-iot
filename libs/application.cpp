@@ -81,7 +81,7 @@ void Application::setup()
 		m_hbLedStep = 1;
 	}
 
-	JsonObject iotBoxState = m_iotBoxInfo.createNestedObject(IOT_BOX_INFO_VALUES);
+	//JsonObject iotBoxState = m_iotBoxInfo.createNestedObject(IOT_BOX_INFO_VALUES);
 
 	m_prefs.begin("IotBox");
 	m_deviceId = m_prefs.getString("deviceId", "unconfigured-iot-box");
@@ -107,22 +107,22 @@ void Application::publishData(uint8_t sendMode)
 
 void Application::setValue(const char *key, const char *value, uint8_t sendMode)
 {
-	JsonObject iotBoxState = m_iotBoxInfo[IOT_BOX_INFO_VALUES];
-	iotBoxState[key] = value;
+	//JsonObject iotBoxState = m_iotBoxInfo[IOT_BOX_INFO_VALUES];
+	m_iotBoxInfo[key] = value;
 	publishData(sendMode);
 }
 
 void Application::setValue(const char *key, const int value, uint8_t sendMode)
 {
-	JsonObject iotBoxState = m_iotBoxInfo[IOT_BOX_INFO_VALUES];
-	iotBoxState[key] = value;
+	//JsonObject iotBoxState = m_iotBoxInfo[IOT_BOX_INFO_VALUES];
+	m_iotBoxInfo[key] = value;
 	publishData(sendMode);
 }
 
 void Application::setValue(const char *key, const float value, uint8_t sendMode)
 {
-	JsonObject iotBoxState = m_iotBoxInfo[IOT_BOX_INFO_VALUES];
-	iotBoxState[key] = value;
+	//JsonObject iotBoxState = m_iotBoxInfo[IOT_BOX_INFO_VALUES];
+	m_iotBoxInfo[key] = value;
 	publishData(sendMode);
 }
 
@@ -133,7 +133,7 @@ void Application::publishAction(const char *key, const char *value)
 	doc[key] = value;
 	serializeJson(doc, payload);
 
-	publish(payload.c_str(), m_deviceTopic.c_str());
+	publish(payload.c_str(), m_actionTopic.c_str());
 	setValue(key, value, SM_NONE);
 }
 
@@ -144,7 +144,7 @@ void Application::publishAction(const char *key, const int value)
 	doc[key] = value;
 	serializeJson(doc, payload);
 
-	publish(payload.c_str(), m_deviceTopic.c_str());
+	publish(payload.c_str(), m_actionTopic.c_str());
 	setValue(key, value, SM_NONE);
 }
 
@@ -155,7 +155,7 @@ void Application::publishAction(const char *key, const float value)
 	doc[key] = value;
 	serializeJson(doc, payload);
 
-	publish(payload.c_str(), m_deviceTopic.c_str());
+	publish(payload.c_str(), m_actionTopic.c_str());
 	setValue(key, value, SM_NONE);
 }
 
@@ -387,6 +387,9 @@ void Application::doIncomingMessage(const char* topic, byte* payload, unsigned i
 			return;
 		}
 	}
+
+	if (strncmp(topic, m_deviceTopic.c_str(), m_deviceTopic.length()))
+		return;
 
 	const char *portId = topic + m_deviceTopic.length();//strrchr(topic, '/');
 	char *subCmd = strchr(portId, '/');
@@ -689,6 +692,9 @@ void Application::setIotBoxCfg(String data)
 		m_deviceTopic = MQTT_TOPIC_THIS_DEVICE"/";
 		m_deviceTopic.concat((const char*)m_boxConfig["deviceId"]);
 		m_deviceTopic.concat("/");
+
+		m_actionTopic = MQTT_TOPIC_THIS_DEVICE"/";
+		m_actionTopic.concat((const char*)m_boxConfig["deviceId"]);
 
 		//m_deviceSubTopic = MQTT_TOPIC_THIS_DEVICE"/";
 		//m_deviceSubTopic.concat((const char*)m_boxConfig["deviceId"]);
