@@ -213,6 +213,10 @@ void Application::initIOPorts()
 		else if (strcmp(portType, "control/level") == 0)
 			newPort = new ShpControlLevel();
 		#endif
+		#ifdef SHP_CONTROL_BISTRELAY_H
+		else if (strcmp(portType, "control/bist-relay") == 0)
+			newPort = new ShpControlBistRelay();
+		#endif
 		#ifdef SHP_CONTROL_HBRIDGE_H
 		else if (strcmp(portType, "control/h-bridge") == 0)
 			newPort = new ShpControlHBridge();
