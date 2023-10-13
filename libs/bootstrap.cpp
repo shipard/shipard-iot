@@ -35,6 +35,7 @@
 #include <controls/controlBinary.cpp>
 #include <controls/controlLedStrip.cpp>
 #include <controls/controlLevel.cpp>
+#include <controls/controlBistRelay.cpp>
 #include <controls/controlHBridge.cpp>
 
 #include <inputs/inputAnalog.cpp>

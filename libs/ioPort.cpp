@@ -82,3 +82,25 @@ void ShpIOPort::onMessage(byte* payload, unsigned int length, const char* subCmd
 void ShpIOPort::shutdown()
 {
 }
+
+int32_t ShpIOPort::stateLoad(int32_t valueNotExist /* = -1 */)
+{
+	char id[80] = "PS_";
+	strcat(id, m_portId);
+
+	app->m_prefs.begin(id);
+	int32_t result = app->m_prefs.getInt("state", valueNotExist);
+	app->m_prefs.end();
+
+	return result;
+}
+
+void ShpIOPort::stateSave(int32_t state)
+{
+	char id[80] = "PS_";
+	strcat(id, m_portId);
+
+	app->m_prefs.begin(id);
+	app->m_prefs.putInt("state", state);
+	app->m_prefs.end();
+}

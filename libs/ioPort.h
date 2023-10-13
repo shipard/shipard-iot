@@ -15,6 +15,10 @@ class ShpIOPort {
 		virtual void loop();
 		virtual void onMessage(byte* payload, unsigned int length, const char* subCmd);
 		virtual void routeMessage(const char* topic, byte* payload, unsigned int length) {};
+
+		int32_t stateLoad(int32_t valueNotExist = -1);
+		void stateSave(int32_t state);
+
 		virtual void shutdown();
 
 	public:

@@ -36,6 +36,7 @@
 #include <controls/controlBinary.h>
 #include <controls/controlLedStrip.h>
 #include <controls/controlLevel.h>
+#include <controls/controlBistRelay.h>
 #include <controls/controlHBridge.h>
 
 #include <inputs/inputAnalog.h>
