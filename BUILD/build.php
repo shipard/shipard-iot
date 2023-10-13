@@ -320,7 +320,7 @@ class BuildApp
 			case	'build-all':     				return $this->buildAll();
 		}
 		echo ("unknown or nothing param....\n");
-		echo (" * build-all [--upload]\n");
+		echo (" * build-all [--upload | --upload-local]\n");
 		return FALSE;
 	}
 }
