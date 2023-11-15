@@ -4,11 +4,6 @@
 
 #define SWITCH_CONTROL_LEVEL_QUEUE_LEN 32
 
-#define qsFree 0
-#define qsLocked 1
-#define qsDoIt 2
-#define qsRunning 3
-
 class ShpControlLevel : public ShpIOPort
 {
 	public:

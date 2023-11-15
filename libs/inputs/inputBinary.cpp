@@ -95,8 +95,8 @@ void ShpInputBinary::loop()
 			const char *pv = (m_detectedValue == HIGH) ? "1" : "0";
 			if (m_sendAsAction)
 				app->publishAction(m_portId, pv);
-
-			app->publish(pv, m_valueTopic.c_str());
+			else
+				app->publish(pv, m_valueTopic.c_str());
 
 			m_needSend = false;
 			m_lastValue = m_detectedValue;
@@ -125,8 +125,8 @@ void ShpInputBinary::loop()
 
 		if (m_sendAsAction)
 			app->publishAction(m_portId, pv);
-
-		app->publish(pv, m_valueTopic.c_str());
+		else
+			app->publish(pv, m_valueTopic.c_str());
 
 		return;
 	}
@@ -138,7 +138,7 @@ void ShpInputBinary::loop()
 
 		if (m_sendAsAction)
 			app->publishAction(m_portId, pv);
-
-		app->publish(pv, m_valueTopic.c_str());
+		else
+			app->publish(pv, m_valueTopic.c_str());
 	}
 }

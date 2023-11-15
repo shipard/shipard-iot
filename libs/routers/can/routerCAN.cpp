@@ -458,7 +458,7 @@ uint8_t ShpRouterCAN::doQueueItemStep(int i)
 
 void ShpRouterCAN::doIncomingPacket(uint32_t msgId, uint8_t dataLen, uint8_t *data)
 {
-
+  /*
   printf("Incoming packet id `%d`, len `%d`, data: ", msgId, dataLen);
   for (int i = 0; i < dataLen; i++)
   {
@@ -468,7 +468,7 @@ void ShpRouterCAN::doIncomingPacket(uint32_t msgId, uint8_t dataLen, uint8_t *da
       printf("  %c  ", data[i]);
   }
   printf("\n");
-
+  */
 
   if (msgId == canMsgId_GET_DEVICE_ID)
   {

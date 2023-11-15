@@ -423,7 +423,7 @@ void ShpClientCAN::doQueueItemStep(int i)
       if (strLen % CAN_SEND_STRING_PACKET_DATA_LEN != 0)
         m_queue[i].stringPacketBlocksCount++;
 
-      //printf ("START STRING SEND; total packets count: %d\n", m_queue[i].stringPacketBlocksCount);
+      //printf ("C_START STRING SEND `%d`; total packets count: %d\n", i, m_queue[i].stringPacketBlocksCount);
 
       CAN_frame_t tx_frame;
       tx_frame.FIR.B.FF = CAN_frame_std;
@@ -443,7 +443,7 @@ void ShpClientCAN::doQueueItemStep(int i)
 
     if (m_queue[i].stringPacketBlockNumber == m_queue[i].stringPacketBlocksCount + 1)
     { // END packet
-      //printf ("END STRING SEND\n");
+      //printf ("C_END STRING SEND `%d`-\n", i);
 
       CAN_frame_t tx_frame;
       tx_frame.FIR.B.FF = CAN_frame_std;
@@ -457,6 +457,8 @@ void ShpClientCAN::doQueueItemStep(int i)
       int res = ESP32Can.CANWriteFrame(&tx_frame);
 
       m_queue[i].data = "";
+      m_queue[i].stringPacketBlockNumber = 0;
+      m_queue[i].stringPacketBlocksCount = 0;
       m_queue[i].qState = qsFree;
       return;
     }
@@ -485,7 +487,7 @@ void ShpClientCAN::doQueueItemStep(int i)
 
     int res = ESP32Can.CANWriteFrame(&tx_frame);
     //Serial.println(res);
-    delay(1);
+    //delay(1);
 
     /*
     printf("send string packet %04d; len `%d`, data: ", m_queue[i].stringPacketBlockNumber, tx_frame.FIR.B.DLC);
@@ -560,15 +562,18 @@ void ShpClientCAN::loop()
     return;
   }
 
-  unsigned long now = millis();
 	for (int i = 0; i < CLIENT_CAN_CONTROL_QUEUE_LEN; i++)
 	{
     if (m_queue[i].qState == qsInProgress)
     {
       doQueueItemStep(i);
-      break;
+      return;
     }
+  }
 
+  unsigned long now = millis();
+	for (int i = 0; i < CLIENT_CAN_CONTROL_QUEUE_LEN; i++)
+	{
 		if (m_queue[i].qState != qsDoIt)
 			continue;
 
@@ -578,7 +583,7 @@ void ShpClientCAN::loop()
 		m_queue[i].qState = qsRunning;
 		runQueueItem(i);
 
-		break;
+		return;
 	}
 
   if (m_OTAUpdate && m_OTAUpdate->m_phase != OTA_SLOW_PHASE_INCOMING_PACKETS)

@@ -109,21 +109,21 @@ void Application::setValue(const char *key, const char *value, uint8_t sendMode)
 {
 	//JsonObject iotBoxState = m_iotBoxInfo[IOT_BOX_INFO_VALUES];
 	m_iotBoxInfo[key] = value;
-	publishData(sendMode);
+	//publishData(sendMode);
 }
 
 void Application::setValue(const char *key, const int value, uint8_t sendMode)
 {
 	//JsonObject iotBoxState = m_iotBoxInfo[IOT_BOX_INFO_VALUES];
 	m_iotBoxInfo[key] = value;
-	publishData(sendMode);
+	//publishData(sendMode);
 }
 
 void Application::setValue(const char *key, const float value, uint8_t sendMode)
 {
 	//JsonObject iotBoxState = m_iotBoxInfo[IOT_BOX_INFO_VALUES];
 	m_iotBoxInfo[key] = value;
-	publishData(sendMode);
+	//publishData(sendMode);
 }
 
 void Application::publishAction(const char *key, const char *value)
