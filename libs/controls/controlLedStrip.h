@@ -2,10 +2,13 @@
 #define SHP_CONTROL_LEDSTRIP_H
 
 
-#define LEDSTRIP_COUNT_MODES 29
+#define LEDSTRIP_COUNT_MODES 32
 #define LEDSTRIP_INVALID_MODE_NAME 255
 #define LEDSTRIP_SET_BRIGHTNESS 254
 #define LEDSTRIP_SET_SPEED 253
+#define LEDSTRIP_SET_PIXEL 252
+#define LEDSTRIP_SET_PAUSE 251
+#define LEDSTRIP_SET_RESUME 250
 
 // -- shipard color mode cfg item --> board value
 /* "enumValues": {

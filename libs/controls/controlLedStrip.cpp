@@ -160,6 +160,35 @@ void ShpControlLedStrip::addQueueItemFromMessage(byte* payload, unsigned int len
 				speed = 65534;
 		m_ws2812fx->setSpeed(speed);
 	}
+	else if (mode == LEDSTRIP_SET_PIXEL)
+	{
+		Serial.println("PIXEL");
+		Serial.println(speed);
+		Serial.println(colors[0]);
+
+		if (speed < 0)
+			speed = 0;
+		else
+			if (speed > m_cntLeds)
+				speed = m_cntLeds;
+		m_ws2812fx->setPixelColor(speed, colors[0]);
+		if (m_ws2812fx->isRunning())
+			m_ws2812fx->pause();
+		m_ws2812fx->show();
+	}
+	else if (mode == LEDSTRIP_SET_PAUSE)
+	{
+		if (m_ws2812fx->isRunning())
+			m_ws2812fx->pause();
+	}
+	else if (mode == LEDSTRIP_SET_RESUME)
+	{
+		if (!m_ws2812fx->isRunning())
+		{
+			m_ws2812fx->resume();
+			m_ws2812fx->show();
+		}
+	}
 	else
 	{
 		if (cntColors == 1)
@@ -171,6 +200,9 @@ void ShpControlLedStrip::addQueueItemFromMessage(byte* payload, unsigned int len
 			m_ws2812fx->setSpeed(speed);
 
 		m_ws2812fx->setMode(mode);
+
+		if (!m_ws2812fx->isRunning())
+			m_ws2812fx->resume();
 	}
 }
 
@@ -215,7 +247,10 @@ uint8_t ShpControlLedStrip::modeFromString(const char *mode)
 
 
 		{"brightness", LEDSTRIP_SET_BRIGHTNESS},
-		{"speed", LEDSTRIP_SET_SPEED}
+		{"speed", LEDSTRIP_SET_SPEED},
+		{"pixel", LEDSTRIP_SET_PIXEL},
+		{"pause", LEDSTRIP_SET_PAUSE},
+		{"resume", LEDSTRIP_SET_RESUME}
 	};
 
 
