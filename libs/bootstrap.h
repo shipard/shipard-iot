@@ -40,6 +40,7 @@
 #include <controls/controlHBridge.h>
 
 #include <inputs/inputAnalog.h>
+#include <inputs/inputCapBtn.h>
 #include <inputs/inputBinary.h>
 #include <inputs/inputCounter.h>
 

@@ -39,6 +39,7 @@
 #include <controls/controlHBridge.cpp>
 
 #include <inputs/inputAnalog.cpp>
+#include <inputs/inputCapBtn.cpp>
 #include <inputs/inputBinary.cpp>
 #include <inputs/inputCounter.cpp>
 

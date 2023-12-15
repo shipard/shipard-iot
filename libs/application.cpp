@@ -223,6 +223,8 @@ void Application::initIOPorts()
 		#endif
 		else if (strcmp(portType, "input/analog") == 0)
 			newPort = new ShpInputAnalog();
+		else if (strcmp(portType, "input/capBtn") == 0)
+			newPort = new ShpInputCapBtn();
 		else if (strcmp(portType, "input/binary") == 0)
 			newPort = new ShpInputBinary();
 		else if (strcmp(portType, "input/counter") == 0)
