@@ -13,7 +13,7 @@ class ApplicationCAN : public Application
 		virtual void loop();
 		virtual void doFwUpgradeRequest(String payload);
 		virtual boolean publish(const char *payload, const char *topic = NULL);
-		virtual void publishData(uint8_t sendMode);
+		virtual void publishData(uint8_t sendMode, const char *payload = NULL);
 
 	public:
 

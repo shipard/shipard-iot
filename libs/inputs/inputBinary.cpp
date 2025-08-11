@@ -66,6 +66,7 @@ void ShpInputBinary::init2()
 	#endif
 	{
 		pinMode(m_pin, INPUT);
+		//pinMode(m_pin,INPUT_PULLUP);
 		attachInterrupt(m_pin, std::bind(&ShpInputBinary::onPinChange, this, m_pin), RISING);
 		m_valid = true;
 	}

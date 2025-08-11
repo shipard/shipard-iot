@@ -48,6 +48,7 @@ class BuildApp
 	var $buildCommit = '';
 	var $buildVersionId = '';
 	var $fwFolderRoot = '';
+	var $fwFolderThisVersion = '';
 	var $fwFolder = '';
 
 	var $fwProjects =[];
@@ -83,17 +84,17 @@ class BuildApp
 		$this->buildChannel = 'devel';
 		$this->buildCommit = shell_exec("git log --pretty=format:'%h' -n 1");
 
-		$this->buildVersionId = $this->libCfg['version'].'-'.$this->buildCommit;
+		$this->buildVersionId = $this->libCfg['version'].'.'.$this->buildCommit;
 		if (1)
-			$this->buildVersionId .= '-'.base_convert((time() - 1600000000), 10, 36);
+			$this->buildVersionId .= '.'.base_convert(intval((time() - 1729251912) / 60), 10, 36);
 
 		file_put_contents('../libs/versionId.h', "#define SHP_LIBS_VERSION \"{$this->buildVersionId}\"\n");
 
 		if (!is_dir('logs'))
 			mkdir('logs');
 
-		$this->fwFolderRoot = 'fw/'.$this->buildChannel.'/ib/';
-		$this->fwFolder = $this->fwFolderRoot;
+		$this->fwFolderRoot = 'fw/'.$this->buildChannel.'/';
+		$this->fwFolderThisVersion = $this->fwFolderRoot.'/'.$this->buildVersionId;
 
 		$this->anyCfgError = FALSE;
 	}
@@ -158,44 +159,39 @@ class BuildApp
 			return FALSE;
 		}
 
-		$versionId = $this->buildVersionId;
-		$dstPathCore = '../BUILD/'.$this->fwFolder.'/'.$projectId;
-		$dstPath = $dstPathCore.'/'.$versionId;
-
-		$dstBaseFileName = /*$projectId.'-'. */$variantId.'-'.$this->buildVersionId.'-fw.bin';
+		$dstPath = '../BUILD/'.$this->fwFolderRoot.'/'.$this->buildVersionId;
+		$dstBaseFileName = $variantId.'-'.$this->buildVersionId.'-fw.bin';
 		$dstFileName = $dstPath.'/'.$dstBaseFileName;
 
-		echo $dstBaseFileName.'; ';
+		//echo $dstBaseFileName.'; ';
 
 		copy($srcFileName, $dstFileName);
 
 		$fileSize = filesize($dstFileName);
-		echo $fileSize.'B; ';
+		$fileSizeFormatted = number_format($fileSize, 0, ',', ' ');
+		echo sprintf('%10s', $fileSizeFormatted).'B; ';
 
 		$checkSum = sha1_file($dstFileName);
 		echo $checkSum;
 
-		$fwFiles['files'][] = ['fwId' => $projectId.'-'.$variantId, 'fileName' => $dstBaseFileName, 'size' => $fileSize, 'sha1' => $checkSum];
+		$fwFiles['files'][$variantId] = [
+			'projectId' => $projectId,
+			'fwId' => /*$projectId.'-'.*/ $variantId,
+			'fileName' => $dstBaseFileName,
+			'size' => $fileSize,
+			'sha1' => $checkSum,
+		];
 
 		return TRUE;
 	}
 
-	function buildProject($projectId)
+	function buildProject($projectId, &$fwFiles)
 	{
-		echo ("### ".$projectId." ###\n");
+		echo (" === ".$projectId." ===\n");
 
 		chdir("../".$projectId);
-		$versionId = $this->buildVersionId;
-
-		$dstPathCore = '../BUILD/'.$this->fwFolder.'/'.$projectId;
-		$dstPath = $dstPathCore.'/'.$versionId;
-
-		$now = new \DateTime();
-		$fwFiles = [
-			'version' => $versionId,
-			'timestamp' => $now->format('Y-m-d H:i:s'),
-			'files' => []
-		];
+		$dstPath = '../BUILD/'.$this->fwFolderRoot.'/'.$this->buildVersionId;
+		//$now = new \DateTime();
 
 		if (!is_dir($dstPath))
 			mkdir ($dstPath, 0700, TRUE);
@@ -204,8 +200,8 @@ class BuildApp
 		{
 			$logFileName = '../BUILD/logs/'.$projectId.'-'.$variantId.'.log';
 
-			$vt = sprintf("%-22s: ", $variantId);
-			echo (" -> ".$vt);
+			echo (" -> ".$variantId.' ');
+			echo (str_repeat('.', 50 - strlen($variantId)).' : ');
 
 			$cmd = $this->localCfg['pioCmd'].' run -s -e '.$variantId.' 2> '.$logFileName;
 			$buildResultCode = 0;
@@ -227,22 +223,6 @@ class BuildApp
 
 		chdir('../BUILD');
 
-		$now = new \DateTime();
-		$versionInfo = [
-			'version' => $this->buildVersionId,
-			'timestamp' => $now->format('Y-m-d H:i:s'),
-		];
-
-		file_put_contents($dstPath.'/files.json', json_encode($fwFiles, JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES));
-
-		file_put_contents($dstPathCore.'/version.json', json_encode($versionInfo, JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES));
-		file_put_contents($dstPathCore.'/VERSION',$this->buildVersionId);
-
-		$this->fwProjects[$projectId] = [
-			'version' => $versionId,
-			'timestamp' => $now->format('Y-m-d H:i:s'),
-		];
-
 		return TRUE;
 	}
 
@@ -251,18 +231,32 @@ class BuildApp
 		if ($this->anyCfgError)
 			return FALSE;
 
+		$now = new \DateTime();
+
 		array_map ('unlink', glob ('logs/*'));
 		exec ('rm -rf '.$this->fwFolderRoot);
-		if (!is_dir($this->fwFolder))
-			mkdir($this->fwFolder, 0700, TRUE);
+		if (!is_dir($this->fwFolderRoot))
+			mkdir($this->fwFolderRoot, 0700, TRUE);
+
+		$fwFiles = [
+			'version' => $this->buildVersionId,
+			'timestamp' => $now->format('Y-m-d H:i:s'),
+			'files' => []
+		];
+
+		echo ("##### ".$this->buildChannel.'; '.$this->buildVersionId." #####\n");
 
 		foreach ($this->projectsCfg['projects'] as $projectId => $projectCfg)
 		{
-			if (!$this->buildProject($projectId))
+			if (!$this->buildProject($projectId, $fwFiles))
 				return FALSE;
 		}
 
-		file_put_contents($this->fwFolder.'/projects.json', json_encode($this->fwProjects, JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES));
+		file_put_contents($this->fwFolderThisVersion.'/_files.json', json_encode($fwFiles, JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES));
+
+		$versionInfo = ['version' => $this->buildVersionId, 'timestamp' => $now->format('Y-m-d H:i:s'),];
+		file_put_contents($this->fwFolderRoot.'/version.json', json_encode($versionInfo, JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES));
+		file_put_contents($this->fwFolderRoot.'/VERSION', $this->buildVersionId);
 
 		$doUpload = $this->arg('upload');
 		if ($doUpload === TRUE)
@@ -278,49 +272,52 @@ class BuildApp
 	{
 		if ($local)
 		{
-			echo "--- UPLOAD LOCAL ---\n";
+			echo "##### UPLOAD LOCAL #####\n";
 			$remoteUser = $this->localCfg['remoteUserLocal'];
 			$remoteServer = $this->localCfg['remoteServerLocal'];
 			$remoteDir = '/var/www/iot-boxes/fw/ib/local';//.$this->buildChannel;
 		}
 		else
 		{
-			echo "--- UPLOAD ---\n";
+			echo "##### UPLOAD #####\n";
 			$remoteUser = $this->localCfg['remoteUser'];
 			$remoteServer = $this->localCfg['remoteServer'];
 			$remoteDir = '/var/www/shpd-webs/download.shipard.org/shipard-iot/fw/ib/'.$this->buildChannel;
 		}
-		foreach ($this->projectsCfg['projects'] as $projectId => $projectCfg)
-		{
-			$versionId = $this->buildVersionId;
-			$uploadCmd = "ssh -l {$remoteUser} {$remoteServer} mkdir -p $remoteDir/$projectId".'/'. $versionId;
-			echo $uploadCmd."\n";
-			passthru($uploadCmd);
 
-			$uploadCmd = "scp ".$this->fwFolder.'/'.$projectId.'/'.$versionId . "/* {$remoteUser}@{$remoteServer}:/$remoteDir/".$projectId.'/'.$versionId;
-			echo $uploadCmd."\n";
-			passthru($uploadCmd);
+		$versionId = $this->buildVersionId;
+		$uploadCmd = "ssh -l {$remoteUser} {$remoteServer} mkdir -p $remoteDir/".$versionId;
+		echo ' -> '.$uploadCmd."\n";
+		passthru($uploadCmd);
 
-			$uploadCmd = "scp ".$this->fwFolder.'/'.$projectId.'/'."/*.json {$remoteUser}@{$remoteServer}:/$remoteDir/".$projectId;
-			echo $uploadCmd."\n";
-			passthru($uploadCmd);
+		$uploadCmd = "scp ".$this->fwFolderRoot.$versionId . "/* {$remoteUser}@{$remoteServer}:/$remoteDir/".$versionId;
+		echo ' -> '.$uploadCmd."\n";
+		passthru($uploadCmd);
 
-			$uploadCmd = "scp ".$this->fwFolder."/*.json {$remoteUser}@{$remoteServer}:/$remoteDir/";
-			echo $uploadCmd."\n";
-			passthru($uploadCmd);
+		$uploadCmd = "scp ".$this->fwFolderRoot."*.json {$remoteUser}@{$remoteServer}:/$remoteDir/";
+		echo ' -> '.$uploadCmd."\n";
+		passthru($uploadCmd);
 
-			echo "--- DONE ---\n";
-		}
+		$uploadCmd = "scp ".$this->fwFolderRoot."VERSION {$remoteUser}@{$remoteServer}:/$remoteDir/";
+		echo ' -> '.$uploadCmd."\n";
+		passthru($uploadCmd);
+
+		echo "##### DONE #####\n";
+
+		return TRUE;
 	}
 
 	public function run ()
 	{
 		switch ($this->command ())
 		{
-			case	'build-all':     				return $this->buildAll();
+			case	'build':     return $this->buildAll();
+			//case	'upload':    return $this->upload();
 		}
+
 		echo ("unknown or nothing param....\n");
-		echo (" * build-all [--upload | --upload-local]\n");
+		echo (" * build [--upload | --upload-local]\n");
+		//echo (" * build [--upload-local]\n");
 		return FALSE;
 	}
 }

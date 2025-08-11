@@ -17,8 +17,8 @@ uint16_t rightRotate(uint16_t n, unsigned int d)
 }
 
 ShpClientCAN::ShpClientCAN() :
-                                m_rxPin(GPIO_NUM_17),
-                                m_txPin(GPIO_NUM_16),
+                                m_rxPin(/*GPIO_NUM_17*/SHP_CAN_PIN_RX),
+                                m_txPin(/*GPIO_NUM_16*/SHP_CAN_PIN_TX),
                                 m_deviceId(0),
                                 m_clientState(ccsNeedDeviceId),
                                 m_clientStateRetryMillis(0),
@@ -309,7 +309,8 @@ void ShpClientCAN::doIncomingPacket(uint32_t msgId, uint8_t dataLen, uint8_t *da
         m_clientState = ccsRunning;
         Serial.println ("app->setIotBoxCfg");
         app->setIotBoxCfg(m_incomingQueue[iqi].data);
-        app->iotBoxInfo();
+        app->m_SendIotBoxInfoTimeout = (60 * 60 + m_deviceId * 3) * 1000; // 60 minutes + "random" delay
+        //app->iotBoxInfo();
       }
       else
       if (m_incomingQueue[iqi].packetCmd == ROUTER_CAN_CMD_ROUTE_TO_DEVICE)

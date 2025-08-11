@@ -1,26 +1,27 @@
 #define SHP_SERIAL_DEBUG_ON
-#define SHP_MQTT
-#define SHP_NETWORK_LAN
-#define SHP_APP_CLASS ApplicationLan
+#define SHP_DISABLE_CAN_ROUTER
+#define SHP_APP_CLASS ApplicationUART
 #define DEBUG 1
 
 #include <Arduino.h>
 
 #include <FunctionalInterrupt.h>
 
-#ifdef ESP32
-#include <HTTPClient.h>
-#endif
 
-#include <PubSubClient.h>
+//#include <HTTPClient.h>
+
+//#include <PubSubClient.h>
+#include <ArduinoJson.h>
 
 #ifdef ESP32
 #include <Preferences.h>
-#include <WebServer.h>
+//#include <WebServer.h>
 #include <Update.h>
 #endif
 
-#include <DNSServer.h>
+
+//#include <WebServer.h>
+//#include <DNSServer.h>
 
 #include <OneWire.h>
 #include <DallasTemperature.h>
@@ -41,19 +42,14 @@
 
 #include <Wire.h>
 
-#define ARDUINOJSON_ENABLE_STD_STRING 0
-#define ARDUINOJSON_ENABLE_ARDUINO_STRING 1
-
-#include <ArduinoJson.h>
 #include <bootstrap.h>
-#include <applicationLan.h>
+#include <applicationUART.h>
 
 
-ApplicationLan *app = new ApplicationLan();
+ApplicationUART *app = new ApplicationUART();
 
 void setup()
 {
-  Serial.println ("--main-setup--");
   app->setup();
 }
 
@@ -64,4 +60,4 @@ void loop()
 
 
 #include <bootstrap.cpp>
-#include <applicationLan.cpp>
+#include <applicationUART.cpp>

@@ -5,29 +5,25 @@ ApplicationUART::ApplicationUART()
 
 void ApplicationUART::setup()
 {
-
 	Application::setup();
-
-
-	Serial.println("UART setup");
-
 }
 
-boolean ApplicationUART::publish(const char *payload, const char *topic /* = NULL */)
+/*
+boolean ApplicationUART::publish(const char *payload, const char *topic / * = NULL * /)
 {
-	String data = topic;
-	data.concat ("\n");
-	data.concat (payload);
-	
 	Serial.println ("ApplicationUART::publish");
-	Serial.println (data);
-	
-	//m_espClient->sendData(data, SHP_ENPT_MESSAGE, m_espClient->m_serverAddress.c_str());
+	Serial.println(topic);
+	Serial.println(payload);
+	Serial.println("---");
+
   return true;
 }
+*/
 
+/*
 void ApplicationUART::publishData(uint8_t sendMode)
 {
+	Serial.println("publishData");
 	if (sendMode == SM_NONE)
 		return;
 	if (sendMode == SM_LOOP)
@@ -36,102 +32,71 @@ void ApplicationUART::publishData(uint8_t sendMode)
 		return;
 	}
 
-	String data = m_deviceTopic.c_str();
-	data.concat("\n");
-	serializeJson(m_iotBoxInfo, data);
+	String payload;
+	serializeJson(m_iotBoxInfo, payload);
 
-	Serial.println ("ApplicationUART::publishData");
-	Serial.println (data);
-
-	//m_espClient->sendData(data, SHP_ENPT_MESSAGE, m_espClient->m_serverAddress.c_str());
+	app->publish(payload.c_str(), m_actionTopic.c_str());
 }
-
-bool ApplicationUART::setIotBoxFromStoredCfg()
-{
-  /*
-	app->m_prefs.begin("IotBox");
-	String data = app->m_prefs.getString("config", "");
-	app->m_prefs.end();
-
-	if (data.length() != 0)
-	{
-		Serial.println("### ApplicationUART::setIotBoxFromStoredCfg ### ");
-		Serial.println(data);
-		setIotBoxCfg(data);
-		return true;
-	}
-  */
-	return false;
-}
+*/
 
 void ApplicationUART::loop()
 {
 	Application::loop();
-
-	//if (m_espClient)
-	//	m_espClient->loop();
-
-	//Serial.println("test_uart");
-	//xdelay(100);
 }
-
-
-#define PWR_PIN 4
-#define LED_PIN 12
-#define PIN_DTR     25
 
 void ApplicationUART::checks()
 {
 	Application::checks();
-	
-  //Serial.println("checks_uart");
-  //Serial.println(app->m_boxConfigLoaded);
-
-  if (!app->m_boxConfigLoaded)
-  {
-    pinMode(LED_PIN, OUTPUT);
-    digitalWrite(LED_PIN, HIGH);
-
-
-    Serial.println("GSM ON start");
-    pinMode(PWR_PIN, OUTPUT);
-    digitalWrite(PWR_PIN, HIGH);
-    delay(500);
-    //digitalWrite(PWR_PIN, LOW);
-    delay(4000);
-    Serial.println("GSM ON done");
-
-    Serial.println("init iot-box config...");
-    const char *CFG = R""""(
-      {
-        "deviceNdx": 17,
-        "deviceId": "test-gsm-uart",
-        "deviceType": "oli-esp32-poe",
-        "ioPorts": [
-            {
-                "type": "signal/gsm",
-                "portId": "gsm",
-                "valueTopic": "shp/readers/test-gsm/gsm",
-                "speed": 2,
-                "mode": 0,
-                "pinRX": 26,
-                "pinTX": 27
-            }
-        ]
-      })"""";
-
-      app->setIotBoxCfg(CFG);
-  }
 }
+
+
 /*
+
+          {
+            "type": "control/matrix",
+            "portId": "M",
+            "pinStop": 21,
+            "pinCurrent": 1,
+            "pinsRows": [2, 3, 5, 6, 7, 8],
+            "pinsCols": [9, 10, 11, 12, 13, 14, 15, 46]
+          },
+          {
+            "type": "control/bist-relay",
+            "portId": "REL1",
+            "pin1": 39,
+            "pin2": 40
+          },
+          {
+            "type": "control/bist-relay",
+            "portId": "REL2",
+            "pin1": 41,
+            "pin2": 42
+          }
+
+
+          {
+            "type": "bus/1wire",
+            "portId": "1w",
+            "valueTopic": "shp/sensors/",
+            "pin": 0
+          },
+
+
+
 		app->setIotBoxCfg(data);
 		if (app->m_boxConfigLoaded)
 		{
 			writeIotBoxConfig(data);
 
 			m_mode = SHP_ENS_IDLE;
-		}	
+		}
 
+          {
+            "type": "bus/1wire",
+            "portId": "1w",
+            "valueTopic": "shp/sensors/",
+            "pin": 47
+          }
 
 
 
@@ -145,21 +110,90 @@ void ShpEspNowClient::writeIotBoxConfig(String data)
 
 
 
-   "iotBoxCfg": {
-        "deviceNdx": 17,
-        "deviceId": "test-poe1",
-        "deviceType": "oli-esp32-poe",
+   {
+        "deviceNdx": 2,
+        "deviceId": "VM1",
+        "deviceType": "sms-uart-esp32s3",
         "ioPorts": [
-            {
-                "type": "signal/gsm",
-                "portId": "gsm",
-                "valueTopic": "shp/readers/test-poe1/gsm",
-                "speed": 5,
-                "mode": 0,
-                "pinRX": 33,
-                "pinTX": 32
-            }
+          {
+            "type": "bus/1wire",
+            "portId": "1w",
+            "valueTopic": "shp/sensors/",
+            "pin": 16
+          },
+          {
+            "type": "input/binary",
+            "portId": "doors",
+            "sendAsAction": 1,
+            "timeout": 250,
+            "valueTopic": "shp/sensors/VM1/doors",
+            "pin": 48
+          },
+          {
+            "type": "input/binary",
+            "portId": "motor",
+            "timeout": 100,
+            "valueTopic": "shp/sensors/VM1/motor",
+            "pin": 21
+          },
+          {
+            "type": "control/bist-relay",
+            "portId": "REL-FAN",
+            "pin1": 39,
+            "pin2": 40
+          },
+          {
+            "type": "control/bist-relay",
+            "portId": "REL-COOLER",
+            "pin1": 41,
+            "pin2": 42
+          },
+          {
+            "type": "control/led-strip",
+            "portId": "leds",
+            "pin": 38,
+            "colorMode": 0,
+            "cntLeds": 60
+          },
+          {
+            "type": "control/matrix",
+            "portId": "M",
+            "pinStop": 21,
+            "pinCurrent": 1,
+            "pinsRows": [2, 3, 5, 6, 7, 8],
+            "pinsCols": [9, 10, 11, 12, 13, 14, 15, 46]
+          }
         ]
     }
+*/
+
+
+/*
+          {
+            "type": "input/binary",
+            "portId": "doors",
+            "sendAsAction": 1,
+            "timeout": 250,
+            "valueTopic": "shp/sensors/VM1/doors",
+            "pin": 42
+          },
+          {
+            "type": "input/binary",
+            "portId": "motor",
+            "timeout": 100,
+            "valueTopic": "shp/sensors/VM1/motor",
+            "pin": 21
+          },
+          {
+            "type": "control/binary",
+            "portId": "R1",
+            "pin": 2
+          },
+          {
+            "type": "control/binary",
+            "portId": "C1",
+            "pin": 9
+          }
+
 
 */

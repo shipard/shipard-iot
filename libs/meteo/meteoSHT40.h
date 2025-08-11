@@ -1,12 +1,12 @@
-#ifndef SHP_METEO_BME280_H
-#define SHP_METEO_BME280_H
+#ifndef SHP_METEO_SHT40_H
+#define SHP_METEO_SHT40_H
 
 
-class ShpMeteoBME280 : public ShpIOPort
+class ShpMeteoSHT40 : public ShpIOPort
 {
 	public:
 
-		ShpMeteoBME280();
+		ShpMeteoSHT40();
 
 		virtual void init(JsonVariant portCfg);
 		virtual void init2();
@@ -17,7 +17,7 @@ class ShpMeteoBME280 : public ShpIOPort
 		int m_address;
 
 		ShpBusI2C *m_bus;
-		Adafruit_BME280 *m_sensor;
+		Adafruit_SHT4x *m_sensor;
 		bool m_sensorStarted;
 
 		unsigned long m_measureInterval;
@@ -27,11 +27,9 @@ class ShpMeteoBME280 : public ShpIOPort
 		boolean m_needSend;
 		float m_temperature;
 		float m_humidity;
-		float m_pressure;
 
 		String m_topicTemperature;
 		String m_topicHumidity;
-		String m_topicPressure;
 };
 
 

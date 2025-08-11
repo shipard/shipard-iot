@@ -32,6 +32,8 @@
 
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
+#include <Adafruit_BMP280.h>
+#include <Adafruit_SHT4x.h>
 
 #include <NewPing.h>
 

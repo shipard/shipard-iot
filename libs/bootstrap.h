@@ -38,6 +38,7 @@
 #include <controls/controlLevel.h>
 #include <controls/controlBistRelay.h>
 #include <controls/controlHBridge.h>
+#include <controls/controlMatrix.h>
 
 #include <inputs/inputAnalog.h>
 #include <inputs/inputCapBtn.h>
@@ -45,15 +46,24 @@
 #include <inputs/inputCounter.h>
 
 #include <sensors/sensorDistanceUS.h>
+
+#ifdef SHP_SENSOR_LD2410
 #include <sensors/LD2410.h>
+#endif
 
 #ifdef ESP32
 #include <meteo/meteoDHT.h>
 #endif
 #include <meteo/meteoBME280.h>
+#include <meteo/meteoBMP280.h>
+#include <meteo/meteoSHT40.h>
 
 #include <BH1750.h>
 #include <meteo/meteoBH1750.h>
+
+#ifdef SHP_POWER_BATT_CHARGER
+#include <power/usb/usbBatteryCharger.h>
+#endif
 
 #include <display/display.h>
 #ifdef SHP_NETWORK_LAN
@@ -62,8 +72,13 @@
 
 #ifdef SHP_NETWORK_LAN
 #include <routers/OTAUpdateSlowSender.h>
-#include <routers/can/routerCAN.h>
+  #ifndef SHP_DISABLE_CAN_ROUTER
+    #include <routers/can/routerCAN.h>
+  #endif
 #endif
+
+#include <clients/uart/clientUART.h>
+
 
 #ifdef SHP_NETWORK_LAN
 #include <networks/espNow/espNow.h>
@@ -72,6 +87,13 @@
 #ifdef SHP_NETWORK_ESP_NOW
 #include <networks/espNow/espNow.h>
 #include <networks/espNow/espNowClient.h>
+#endif
+
+
+#ifdef SHP_WIFI
+#include <esp_wifi.h>
+#include <WiFi.h>
+#include <networks/wifi/WiFiConnector.h>
 #endif
 
 #ifdef SHP_WIFI_MANAGER

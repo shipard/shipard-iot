@@ -1,6 +1,6 @@
 extern SHP_APP_CLASS *app;
 
-ShpMeteoBME280::ShpMeteoBME280() :
+ShpMeteoSHT40::ShpMeteoSHT40() :
 																	m_address(-1),
 																	m_bus(NULL),
 																	m_sensor(NULL),
@@ -9,30 +9,18 @@ ShpMeteoBME280::ShpMeteoBME280() :
 																	m_nextMeasure(0),
 																	m_needSend(false),
 																	m_temperature(0.0),
-																	m_humidity(0.0),
-																	m_pressure(0.0)
+																	m_humidity(0.0)
 {
 }
 
-void ShpMeteoBME280::init(JsonVariant portCfg)
+void ShpMeteoSHT40::init(JsonVariant portCfg)
 {
-	/* config format:
-	 * --------------------------
-	 	{
-			"type": "meteoBME280",
-			"portId": "uio-5-1",
-			"i2cBusPortId": "i2c_1",
-			"address": "77"
-		}
-	-----------------------------*/
-
-	m_address = 0x77;
+	m_address = 0x44;
 
 	ShpIOPort::init(portCfg);
 
 	m_topicTemperature = m_valueTopic + "temperature/" + app->m_deviceId + "/" + m_portId;
 	m_topicHumidity = m_valueTopic + "humidity/" + app->m_deviceId + "/" + m_portId;
-	m_topicPressure = m_valueTopic + "pressure/" + app->m_deviceId + "/" + m_portId;
 
 	// -- busPortid
 	m_busPortId = NULL;
@@ -63,7 +51,7 @@ void ShpMeteoBME280::init(JsonVariant portCfg)
 	m_valid = true;
 }
 
-void ShpMeteoBME280::init2()
+void ShpMeteoSHT40::init2()
 {
 	if (!m_valid || !m_busPortId)
 		return;
@@ -72,7 +60,7 @@ void ShpMeteoBME280::init2()
 
 	if (m_bus)
 	{
-		m_sensor = new Adafruit_BME280();
+		m_sensor = new Adafruit_SHT4x();
 	}
 	else
 	{
@@ -81,7 +69,7 @@ void ShpMeteoBME280::init2()
 }
 
 
-void ShpMeteoBME280::loop()
+void ShpMeteoSHT40::loop()
 {
 	ShpIOPort::loop();
 
@@ -94,18 +82,21 @@ void ShpMeteoBME280::loop()
 
 	if (!m_sensorStarted)
 	{
-		m_sensorStarted = m_sensor->begin(m_address, m_bus->wire());
+		m_sensorStarted = m_sensor->begin(m_bus->wire());
 		if (!m_sensorStarted)
 		{
-			log (shpllError, "BME280 not started");
+			log (shpllError, "SHT40 not started");
 			m_nextMeasure = now + 3 * m_measureInterval;
 			return;
 		}
+		m_sensor->setPrecision(SHT4X_HIGH_PRECISION);
+  	m_sensor->setHeater(SHT4X_NO_HEATER);
 	}
 
-	m_temperature = m_sensor->readTemperature();
-	m_humidity = m_sensor->readHumidity();
-	m_pressure = m_sensor->readPressure() / 100 + 32;
+	sensors_event_t humidity, temp;
+  m_sensor->getEvent(&humidity, &temp);
+	m_temperature = temp.temperature;
+	m_humidity = humidity.relative_humidity;
 
 	static char b[16];
 
@@ -114,16 +105,6 @@ void ShpMeteoBME280::loop()
 
 	sprintf(b, "%.1f", m_humidity);
 	app->publish(b, m_topicHumidity.c_str());
-
-	sprintf(b, "%.1f", m_pressure);
-	app->publish(b, m_topicPressure.c_str());
-
-
-	Serial.printf("BME280 (%ld):\n", millis());
-	Serial.println(m_temperature);
-	Serial.println(m_humidity);
-	Serial.println(m_pressure);
-
 
 	m_nextMeasure = now + m_measureInterval;
 }

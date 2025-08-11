@@ -4,10 +4,10 @@ extern SHP_APP_CLASS *app;
 int g_cntUarts = 1;
 
 
-ShpDataSerial::ShpDataSerial() : 
+ShpDataSerial::ShpDataSerial() :
 																m_speed(-1),
 																m_mode(0),
-																m_rxPin(-1), 
+																m_rxPin(-1),
 																m_txPin(-1),
 																m_telnetPort(0),
 																m_hwSerial(NULL)
@@ -45,7 +45,7 @@ void ShpDataSerial::init(JsonVariant portCfg)
 	int speed = -1;
 	if (portCfg["speed"] != nullptr)
 		speed = portCfg["speed"];
-	if (speed < 0 || speed >= SERIAL_SPEED_MAP_CNT)	
+	if (speed < 0 || speed >= SERIAL_SPEED_MAP_CNT)
 		return;
 	m_speed = SERIAL_SPEED_MAP[speed];
 
@@ -53,7 +53,7 @@ void ShpDataSerial::init(JsonVariant portCfg)
 	int mode = -1;
 	if (portCfg["mode"] != nullptr)
 		mode = portCfg["mode"];
-	if (mode < 0 || mode >= SERIAL_MODE_MAP_CNT)	
+	if (mode < 0 || mode >= SERIAL_MODE_MAP_CNT)
 		return;
 	m_mode = SERIAL_MODE_MAP[mode];
 
@@ -96,7 +96,7 @@ void ShpDataSerial::loop()
 	}
 	#endif
 
-	while (m_hwSerial->available()) 
+	while (m_hwSerial->available())
 	{
 		char c = (char)m_hwSerial->read();
 
@@ -123,7 +123,7 @@ void ShpDataSerial::loop()
 		{
 			app->publish(m_buffer, m_valueTopic.c_str());
 		}
-		
+
 		m_bufNeedSend = 0;
 		m_sbCnt = 0;
 		m_buffer[0] = 0;

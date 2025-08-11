@@ -19,17 +19,17 @@ static esp_now_peer_info_t espNowClientPeerInfo;
 /*
 void espClientOnSendError(uint8_t* ad)
 {
-  Serial.println("ERROR: Sending to '"+g_espClient->m_espNow->macToStr(ad)+"' was not possible!");  
+  Serial.println("ERROR: Sending to '"+g_espClient->m_espNow->macToStr(ad)+"' was not possible!");
 }
 */
 
-void espNowClientOnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) 
+void espNowClientOnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status)
 {
   Serial.print("Last Packet Send Status: ");
   Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
 }
 
-ShpEspNowClient::ShpEspNowClient() : 
+ShpEspNowClient::ShpEspNowClient() :
 																			m_mode(SHP_ENS_UNINITIALIZED)
 {
 	g_espClient = this;
@@ -73,11 +73,11 @@ void ShpEspNowClient::doPair()
 
 #if defined(ESP8266)
 		wifi_set_macaddr(STATION_IF, &m_pairingMac[0]);
-#elif defined(ESP32)	
+#elif defined(ESP32)
 		esp_wifi_set_mac(WIFI_IF_STA, &m_pairingMac[0]);
 #endif
 
-	Serial.println("MAC set to : "+WiFi.macAddress());  
+	Serial.println("MAC set to : "+WiFi.macAddress());
 
 	m_mode = SHP_WAIT_FOR_CLIENT_PAIR;
 }
@@ -89,7 +89,7 @@ void ShpEspNowClient::init()
 	WiFi.macAddress(m_clientMac);
 	Serial.println("Client addresss is " + WiFi.macAddress());
 
-	if (esp_now_init() != ESP_OK) 
+	if (esp_now_init() != ESP_OK)
 	{
     Serial.println("Error initializing ESP-NOW");
     return;
@@ -128,12 +128,12 @@ void ShpEspNowClient::setServerAddress(const char *address)
 {
 	uint8_t serverAddress[] = {0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
 	shpStrToMac(address, serverAddress);
-	
+
 	memcpy(espNowClientPeerInfo.peer_addr, serverAddress, 6);
-  espNowClientPeerInfo.channel = 0;  
+  espNowClientPeerInfo.channel = 0;
 	espNowClientPeerInfo.encrypt = false;
-  
-  // Add peer        
+
+  // Add peer
   if (esp_now_add_peer(&espNowClientPeerInfo) != ESP_OK)
 	{
     Serial.println("Failed to add peer");
@@ -157,7 +157,7 @@ void ShpEspNowClient::sendSinglePacket(const char *data, size_t len, uint8_t pac
 	esp_now_send(NULL, (uint8_t *) &packet, packet.dataLen + SHP_PACKET_HEADER_LEN);
 }
 
-void ShpEspNowClient::espNowClientOnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len) 
+void ShpEspNowClient::espNowClientOnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len)
 {
 	shp_en_packet_t packet;
   memcpy(&packet, incomingData, len);
@@ -221,7 +221,7 @@ void ShpEspNowClient::doPairRequestRun()
 
 	delay(1000);
 
-	app->reboot();
+	app->doReboot();
 	m_mode = SHP_ENS_IDLE;
 }
 
@@ -238,7 +238,7 @@ void ShpEspNowClient::onReceiveData(uint8_t packetType, String data)
 			writeIotBoxConfig(data);
 
 			m_mode = SHP_ENS_IDLE;
-		}	
+		}
 	}
 }
 

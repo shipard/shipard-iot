@@ -16,7 +16,8 @@ class ShpInputCapBtn : public ShpIOPort
 		int8_t m_pin;
 		int m_treshold;
 		int m_ledStripPixel;
-		int m_sendValue;
+		//int m_sendValue;
+		bool m_needSend;
 		unsigned long m_measureInterval; // ms
 		unsigned long m_debounceDelay;
     unsigned long m_lastDebounceTime;
@@ -28,6 +29,11 @@ class ShpInputCapBtn : public ShpIOPort
     String m_portIdBuzzer;
     String m_portIdLedStrip;
 		String m_ledStripPixelColor;
+
+	protected:
+
+		void onPinChange(int pin);
+
 };
 
 

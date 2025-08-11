@@ -21,6 +21,10 @@
 #define shpllVerbose 7
 #define shpllALL 7
 
+#define bcifUnknown 0
+#define bcifNotStoredInFlash 1
+#define bcifStoredInFlash 2
+
 static const char* const SHP_LOG_LEVEL_NAMES[shpllALL] =
 {
 	"ERR", 				// shpllError
@@ -52,9 +56,12 @@ class ShpModemGSM;
 #define hbLEDStatus_NetworkAddressReady 2
 #define hbLEDStatus_WaitForCfg					3
 #define hbLEDStatus_Running							4
+#define hbLEDStatus_Unconfigured				5
 
 #define hbLEDMode_BINARY_STEPS 					2
 #define hbLEDMode_RGB_STEPS 						2
+
+class ShpClientUART;
 
 class Application {
 
@@ -63,9 +70,10 @@ class Application {
 		Application();
 
 		virtual void checks();
+		virtual void checkAutoSleep();
 
 		virtual void init();
-		void doIncomingMessage(const char* topic, byte* payload, unsigned int length);
+		void doIncomingMessage(const char* topic, byte* payload, unsigned int length, uint8_t shortMode = 0);
 		virtual void doFwUpgradeRequest(String payload);
 
 		void initIOPorts();
@@ -77,6 +85,11 @@ class Application {
 		virtual void loadBoxConfig();
 		virtual void loop();
 		virtual void setIotBoxCfg(String data);
+		bool setIotBoxFromStoredCfg();
+
+		void saveIotBoxCfg(String cfg, bool rebootNow = false);
+		void saveIotBoxCfgWiFi(String cfg, bool rebootNow = false);
+		void saveIotBoxCfgServers(String cfg, bool rebootNow = false);
 
 		virtual void subscribeIOPortTopic (uint8_t ioPortIndex, const char *topic);
 
@@ -85,18 +98,25 @@ class Application {
 		void runCmdQueueItem(int i);
 		void doSet(byte* payload, unsigned int length);
 
-		void reboot();
+		void setChargingState(bool charging);
+
+
+		void doReboot();
+		void doSleep();
+		virtual void checkBeforeSleep();
+
 		void setLogLevel(const char *logLevel);
 
 		void log(uint8_t msgClass, const char* format, ...);
 		void log(const char *msg, uint8_t level);
 		void iotBoxInfo();
+		void getIotBoxCfg();
 
 		virtual boolean publish(const char *payload, const char *topic = NULL);
 		void setValue(const char *key, const char *value, uint8_t sendMode);
 		void setValue(const char *key, const int value, uint8_t sendMode);
 		void setValue(const char *key, const float value, uint8_t sendMode);
-		virtual void publishData(uint8_t sendMode);
+		virtual void publishData(uint8_t sendMode, const char *payload = NULL);
 		void publishAction(const char *key, const char *value);
 		void publishAction(const char *key, const int value);
 		void publishAction(const char *key, const float value);
@@ -105,6 +125,8 @@ class Application {
 
 		void doHBLed();
 		void setHBLedStatus(uint8_t status);
+
+		void setDSWakeupTimer(int seconds);
 
 	public:
 
@@ -120,8 +142,6 @@ class Application {
 		ShpModemGSM *m_modem;
 		#endif
 
-		String cfgServerHostName;
-		String mqttServerHostName;
 		String macHostName;
 
 		String m_deviceTopic;
@@ -129,7 +149,9 @@ class Application {
 		//String m_deviceSubTopic;
 
 		StaticJsonDocument<16384> m_boxConfig;
+		StaticJsonDocument<2048> m_serversConfig;
 		boolean m_boxConfigLoaded;
+		uint8_t m_boxConfigInFlash;
 
 		ShpIOPort **m_ioPorts;
 		uint8_t m_countIOPorts;
@@ -168,6 +190,27 @@ protected:
 		RoutedTopicItem *m_routedTopics;
 
 		Adafruit_NeoPixel *m_hbLed;
+
+		uint8_t m_useSerialComm;
+		ShpClientUART *m_clientUART;
+
+		bool m_disableAutoSleep;
+		bool m_wakeUpFromSleep;
+		int m_dsWakeupTimer;
+
+	public:
+
+		boolean m_serverConnected;
+
+		bool m_lowPowerDevice;
+		bool m_lowPowerDeviceCharging;
+		long m_TotalLoops;
+
+		long m_SendIotBoxInfoTimeout;
+		long m_SendIotBoxInfoNextSend;
+
+		bool m_autoSleepEnabled;
+		bool m_doCheckAutoSleep;
 
 };
 

@@ -1,6 +1,9 @@
 #define SHP_SERIAL_DEBUG_ON
-#define SHP_MQTT
+//#define SHP_MQTT
+#define SHP_INTERNET_MODE
 #define SHP_NETWORK_LAN
+//#define SHP_NETWORK_ESP_NOW
+#define SHP_DISABLE_CAN_ROUTER
 #define SHP_APP_CLASS ApplicationLan
 #define DEBUG 1
 
@@ -49,12 +52,50 @@
 #include <applicationLan.h>
 
 
+// ===================================
+#include <GxEPD2_BW.h>
+#include <GxEPD2_3C.h>
+#include <GxEPD2_4C.h>
+#include <GxEPD2_7C.h>
+
+
+
+//#include <bootstrap.h>
+
+#include <epd/epdDisplay.h>
+
+
+//#include <applicationLAN.h>
+
+
 ApplicationLan *app = new ApplicationLan();
+
+#if defined(ESP32) && defined(USE_HSPI_FOR_EPD)
+SPIClass hspi(HSPI);
+#endif
+
+
+
+
+
 
 void setup()
 {
-  Serial.println ("--main-setup--");
   app->setup();
+
+  /*
+  Serial.println ("power on....");
+  pinMode(19, OUTPUT);
+  digitalWrite(19, HIGH);
+  delay(5000);
+  */
+
+//  delay(3000);
+
+  //display.hibernate();
+  //display.powerOff();
+
+  Serial.println("\r\nInitialisation done.");
 }
 
 void loop()
@@ -64,4 +105,5 @@ void loop()
 
 
 #include <bootstrap.cpp>
+#include <epd/epdDisplay.cpp>
 #include <applicationLan.cpp>

@@ -93,6 +93,7 @@ void ApplicationDSEN::publishData(uint8_t sendMode)
 	m_espClient->sendData(data, SHP_ENPT_MESSAGE, m_espClient->m_serverAddress.c_str());
 }
 
+/*
 bool ApplicationDSEN::setIotBoxFromStoredCfg()
 {
 	app->m_prefs.begin("IotBox");
@@ -109,6 +110,7 @@ bool ApplicationDSEN::setIotBoxFromStoredCfg()
 
 	return false;
 }
+*/
 
 void ApplicationDSEN::loop()
 {

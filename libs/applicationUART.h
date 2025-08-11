@@ -12,10 +12,8 @@ class ApplicationUART : public Application
 		virtual void checks();
 		virtual void setup();
 		virtual void loop();
-		virtual boolean publish(const char *payload, const char *topic = NULL);
-		virtual void publishData(uint8_t sendMode);
-
-		bool setIotBoxFromStoredCfg();
+		//virtual boolean publish(const char *payload, const char *topic = NULL);
+		//virtual void publishData(uint8_t sendMode);
 
 		//virtual boolean publish(const char *payload, const char *topic = NULL);
 		//virtual void publishData(uint8_t sendMode);

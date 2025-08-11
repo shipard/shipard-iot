@@ -19,23 +19,29 @@
 #include <HTTPClient.h>
 #include <WiFiType.h>
 
+#include <WiFiClientSecure.h>
+
 
 bool ApplicationLan::eth_connected = false;
 
 
 void WiFiEvent2(WiFiEvent_t event)
 {
+	Serial.println("WiFiEvent2");
+	Serial.println(event);
   switch (event)
   {
 		#ifdef SHP_ETH
     case ARDUINO_EVENT_ETH_START:
-			Serial.println("ETH Started");
+			Serial.print("ETH Started, MAC: ");
+			Serial.println(ETH.macAddress());
       ETH.setHostname(app->m_deviceId.c_str());
       break;
-		#endif
     case ARDUINO_EVENT_ETH_CONNECTED:
-      Serial.println("ETH Connected");
+      Serial.print("ETH Connected, MAC: ");
+			Serial.println(ETH.macAddress());
       break;
+		#endif
 		case ARDUINO_EVENT_WIFI_STA_CONNECTED:
       Serial.println("WiFi Connected");
       break;
@@ -91,8 +97,12 @@ ApplicationLan::ApplicationLan() :
 																		#ifdef SHP_MQTT
 																		mqttClient (NULL),
 																		#endif
+																		#ifdef SHP_WIFI
+																		m_wifiConnector(NULL),
+																		#endif
 																		m_networkInfoInitialized(false),
-																		m_mqttReconnectAttempAfter(0)
+																		m_mqttReconnectAttempAfter(0),
+																		m_loadConfigAfter(0)
 {
 }
 
@@ -123,6 +133,7 @@ void ApplicationLan::init()
 		checkMqtt();
 		if (mqttClient->connected())
 			break;
+		Serial.println("WAIT FOR MQTT CLIENT");
 		delay(200);
 		tryCount++;
 	}
@@ -134,6 +145,7 @@ void ApplicationLan::init()
 void ApplicationLan::init2IOPorts()
 {
 	Application::init2IOPorts();
+
 	#ifdef SHP_MQTT
   if (!mqttClient || !mqttClient->connected())
 		return;
@@ -154,7 +166,10 @@ void ApplicationLan::checks()
 	Application::checks();
 
 	if (!eth_connected)
+	{
+		//Serial.println("ETH NOT CONNECTED");
 		return;
+	}
 
 	if (!m_networkInfoInitialized)
 	{
@@ -164,7 +179,14 @@ void ApplicationLan::checks()
 
 	if (!m_boxConfigLoaded)
 	{
-		loadBoxConfig();
+		if (m_loadConfigAfter < millis())
+			loadBoxConfig();
+
+		if (millis() > 60 * 1000)
+		{
+			ESP.restart();
+			return;
+		}
 		return;
 	}
 
@@ -176,11 +198,23 @@ void ApplicationLan::checks()
 #ifdef SHP_MQTT
 void ApplicationLan::checkMqtt()
 {
-  if (!mqttClient || mqttClient->connected())
+	if (m_mqttServerHostName.length() == 0)
+	{
+		app->setHBLedStatus(hbLEDStatus_Unconfigured);
+		app->log(shpllError, "MQTT server host name not set, config loading failed");
+		m_mqttReconnectAttempAfter = millis() + 5000;
 		return;
+	}
 
-	mqttClient->setServer(mqttServerHostName.c_str(), 1883);
+  if (!eth_connected || !mqttClient || !m_boxConfigLoaded || mqttClient->state() == MQTT_CONNECTED)
+	{
+		m_mqttReconnectAttempAfter = millis() + 5000;
+		return;
+	}
+
+	mqttClient->setServer(m_mqttServerHostName.c_str(), 1883);
 	Serial.println("[MQTT] connect to server!");
+	Serial.println(m_mqttServerHostName.c_str());
 
 	/*
 	String id = (const char*)m_boxConfig["deviceId"];
@@ -188,15 +222,18 @@ void ApplicationLan::checkMqtt()
 	id.concat(rand());
 	*/
 
+Serial.println("[MQTT] connect 0!");
 	setHBLedStatus(hbLEDStatus_WaitForCfg);
-
+Serial.println("[MQTT] connect 1!");
 	mqttClient->connect((const char*)m_boxConfig["deviceId"], m_logTopic.c_str(), 0, 0, "disconnect");
+Serial.println("[MQTT] connect 2!");
 
-	if (!mqttClient->connected())
+	if (mqttClient->state() != MQTT_CONNECTED)
 	{
 		m_mqttReconnectAttempAfter = millis() + 5000;
 		return;
 	}
+Serial.println("[MQTT] connect 3!");
 
 	String dst = m_deviceTopic + "#";
 	mqttClient->subscribe(dst.c_str());
@@ -205,28 +242,33 @@ void ApplicationLan::checkMqtt()
 	Serial.printf("[MQTT] subscribe routed topics: %d\n", m_routedTopicsCount);
 	for (int i = 0; i < m_routedTopicsCount; i++)
 	{
-		Serial.print("SUBSCRIBE ROUTED TOPIC: ");
-		Serial.println(m_routedTopics[i].topic);
-
 		String st = m_routedTopics[i].topic;
-		st.concat ("/#");
+		st.concat ("#");
+
+		Serial.print("SUBSCRIBE ROUTED TOPIC: ");
+		Serial.println(st.c_str());
+
 		mqttClient->subscribe(st.c_str());
 	}
 
 	setHBLedStatus(hbLEDStatus_Running);
 	m_mqttReconnectAttempAfter = 0;
+	m_serverConnected = true;
 
-	iotBoxInfo();
+	//m_SendIotBoxInfoTimeout = 15 * 60 * 1000; // 15 minutes
+	//iotBoxInfo();
 }
 #endif
 
 
-//#ifdef SHP_MQTT
+#ifdef SHP_MQTT
 void ApplicationLan::onMqttMessage(const char* topic, byte* payload, unsigned int length)
 {
+	Serial.printf("onMqttMessage: topic='%s', payloadLen: %d\n", topic, length);
+
 	doIncomingMessage(topic, payload, length);
 }
-//#endif
+#endif
 
 int ApplicationLan::getDeviceCfg(uint8_t *mac, String& data)
 {
@@ -234,15 +276,20 @@ int ApplicationLan::getDeviceCfg(uint8_t *mac, String& data)
 	macAddr[18] = 0;
 	sprintf(macAddr, "%02x-%02x-%02x-%02x-%02x-%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 
-  String url = "http://" + cfgServerHostName + "/cfg/" + macAddr + ".json";
+	#ifdef SHP_INTERNET_MODE
+	String url = "https://" + m_cfgServerHostName + "/feed/iot-api/mac:" + macAddr + "/getDeviceCfg";
+	#else
+	String url = "http://" + m_cfgServerHostName + "/cfg/" + macHostName + ".json";
+	#endif
+  Serial.println("========== CFG URL1: "+url);
 
-  Serial.println("========== CFG URL: "+url);
+  WiFiClientSecure client;
+	client.setInsecure();
 
-  WiFiClient client;
   HTTPClient http;
 
   Serial.print("[HTTP] begin");
-	http.setTimeout(1000);
+	http.setTimeout(500);
   if (http.begin(client, url))
   {
     Serial.print("[HTTP] GET...");
@@ -284,33 +331,56 @@ void ApplicationLan::setup()
 	#ifdef SHP_ETH
   	WiFi.onEvent(WiFiEvent2);
 		#ifdef SHP_ETH_LAN8720
+			delay(2000);
+			Serial.println("### WAIT FOR ETH BEGIN 1 ### ");
+			delay(2000);
 			ETH.begin(ETH_ADDR, ETH_POWER_PIN, ETH_MDC_PIN, ETH_MDIO_PIN, ETH_TYPE, ETH_CLK_MODE);
 		#else
+			Serial.println("### WAIT FOR ETH BEGIN 2 ### ");
+			delay(3000);
 			ETH.begin();
 		#endif
 	#endif
 
 	#ifdef SHP_WIFI
-	#ifdef SHP_WIFI_MANAGER
-	WiFi.begin();
-	wifi_config_t wifiConfig;
-	esp_err_t wifiConfigState = esp_wifi_get_config(WIFI_IF_STA, &wifiConfig);
-	Serial.printf ("wifiConfigState = %d, ssid=`%s`\n", wifiConfigState, wifiConfig.sta.ssid);
+		#ifdef SHP_WIFI_MANAGER
+			WiFi.begin();
+			wifi_config_t wifiConfig;
+			esp_err_t wifiConfigState = esp_wifi_get_config(WIFI_IF_STA, &wifiConfig);
+			Serial.printf ("wifiConfigState = %d, ssid=`%s`\n", wifiConfigState, wifiConfig.sta.ssid);
 
-	if (wifiConfig.sta.ssid[0] != 0)
-	{
-		Serial.println("INIT WIFI");
-		WiFi.onEvent(WiFiEvent2);
-	}
-	else
-	{
-		//wifiManager.resetSettings();
-		WiFi.disconnect();
+			if (wifiConfig.sta.ssid[0] != 0)
+			{
+				Serial.println("INIT WIFI");
+				WiFi.onEvent(WiFiEvent2);
+			}
+			else
+			{
+				WiFi.disconnect();
 
-		WiFiManager wifiManager;
-		wifiManager.autoConnect("", "aassddffgg");
-	}
-	#endif
+				WiFiManager wifiManager;
+				//wifiManager.resetSettings();
+				wifiManager.autoConnect("", "aassddffgg");
+			}
+		#else
+			//delay(1000);
+			Serial.print("connect to wifi: ");
+			WiFi.onEvent(WiFiEvent2);
+
+			m_wifiConnector = new ShpWiFiConnector();
+
+
+			/*
+			WiFi.enableIpV6();
+			delay(2000);
+			Serial.print("Local IPv4: ");
+			Serial.println(WiFi.localIP());
+			Serial.print("Local IPv6: ");
+			Serial.println(WiFi.localIPv6());
+			*/
+
+			//delay(1000);
+		#endif
 	#endif
 
 	#ifdef SHP_MQTT
@@ -326,75 +396,83 @@ void ApplicationLan::setup()
 
 void ApplicationLan::loadBoxConfig()
 {
-	// -- PREPARE CFG SERVER HOST NAME
-	if (cfgServerHostName == "")
+	if (m_cfgServerHostName.length() == 0)
 	{
-		#ifdef SHP_ETH
-		ipLocal = ETH.localIP();
-		macHostName = ETH.macAddress();
-		#endif
-
-		#ifdef SHP_WIFI
-		ipLocal = WiFi.localIP();
-		macHostName = WiFi.macAddress();
-		#endif
-
-		macHostName.replace(':', '-');
-		macHostName.toLowerCase();
-
-		cfgServerHostName = "";
-
-		char testSrvName[64];
-		struct addrinfo* result;
-		int error;
-
-		sprintf(testSrvName, "shp-iot-cfg-server-%d-%d-%d", ipLocal[0], ipLocal[1], ipLocal[2]);
-		error = getaddrinfo(testSrvName, NULL, NULL, &result);
-		if(error == 0)
-		{
-			cfgServerHostName = testSrvName;
-			freeaddrinfo(result);
-		}
-		else
-		{
-			strcpy(testSrvName, "shp-iot-cfg-server");
-			error = getaddrinfo(testSrvName, NULL, NULL, &result);
-			if(error == 0)
-			{
-				cfgServerHostName = testSrvName;
-				freeaddrinfo(result);
-			}
-			else
-			{
-				IPAddress cfgSrv = ipLocal;//ETH.localIP();
-				cfgSrv[3] = 2;
-				cfgServerHostName = cfgSrv.toString();
-			}
-		}
-
-		Serial.print("cfgServerHostName: ");
-		Serial.println(cfgServerHostName);
+		app->setHBLedStatus(hbLEDStatus_Unconfigured);
+		app->log(shpllError, "API server host name not set, config loading failed");
+		m_loadConfigAfter = millis() + 5000;
+		return;
 	}
 
 	// -- LOAD CFG FROM SERVER
-  String url = "http://" + cfgServerHostName + "/cfg/" + macHostName + ".json";
-  Serial.println("========== CFG URL: "+url);
+	#ifdef SHP_INTERNET_MODE
+	String url = "https://" + m_cfgServerHostName + "/feed/iot-api/mac:" + macHostName + "/getDeviceCfg";
+	#else
+	//String url = "http://" + m_cfgServerHostName + "/cfg/" + macHostName + ".json";
+	String url = "https://" + m_cfgServerHostName + "/feed/iot-api/mac:" + macHostName + "/getDeviceCfg";
+	#endif
+  //Serial.println("========== CFG URL2: "+url);
 
-  String data;
+	app->log(shpllStatus, "Loading config; URL: `%s`", url.c_str());
+  String data = "";
 
-  WiFiClient client;
+  WiFiClientSecure client;
+	client.setInsecure(); // Disable SSL certificate verification for testing purposes
+
   HTTPClient http;
+  //Serial.print("[HTTP] begin");
+	//http.setTimeout(3000);
 
-  Serial.print("[HTTP] begin");
-	http.setTimeout(5000);
+/*
+    WiFiClient* stream = http.getStreamPtr();
+    while (http.connected() && (loadedBytes < m_imgDataSize))
+    {
+      size_t availableBytes = stream->available();
+      if (availableBytes)
+      {
+        if (!headerLoaded)
+        {
+          cntBytesReaded = stream->readBytes(m_imgData, 64);
+          loadedBytes += cntBytesReaded;
+          parseFileHeader(m_imgData);
+          Serial.printf("width: %d, height: %d \n", m_imgWidth, m_imgHeight);
+          headerLoaded = true;
+          continue;
+        }
+        size_t readedBytes = stream->readBytes(m_imgData + loadedBytes, 2048);
+        if (readedBytes)
+        {
+          loadedBytes += readedBytes;
+        }
+      }
+    }
+*/
+
+
+
+
   if (http.begin(client, url))
   {
-    Serial.print("[HTTP] GET...");
+    //Serial.print("[HTTP] GET...");
     int httpCode = http.GET();
-
+		delay(100);
     if (httpCode > 0)
     {
-      Serial.printf("[HTTP] GET... code: %d", httpCode);
+			/*****
+			WiFiClient* stream = http.getStreamPtr();
+			while (http.connected())
+			{
+				size_t availableBytes = stream->available();
+				if (availableBytes)
+				{
+					data.concat((char)stream->read());
+				}
+				else
+				{
+					break;
+				}
+			}
+			*****/
 
       if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY)
       {
@@ -402,33 +480,39 @@ void ApplicationLan::loadBoxConfig()
       }
       else
       {
-        Serial.printf("[HTTP] GET... failed, error: %s", http.errorToString(httpCode).c_str());
+        app->log(shpllError, "[HTTP] GET failed with status `%d`", httpCode);
       }
     }
     else
     {
-      Serial.printf("[HTTP] Unable to connect");
+      app->log(shpllError, "[HTTP] Unable to connect");
     }
     http.end();
 
-    Serial.println(data);
-
     if (data.length())
     {
+	    //app->log(shpllStatus, "Box config data length: %d; content: `%s`", data.length(), data.c_str());
 			setIotBoxCfg(data);
+
+			m_SendIotBoxInfoTimeout = 15 * 60 * 1000; // 15 minutes
+			m_SendIotBoxInfoNextSend = millis() + m_SendIotBoxInfoTimeout;
+
+			iotBoxInfo();
+
 			return;
     }
   }
 
-	cfgServerHostName = "";
-	sleep(10);
+	//m_cfgServerHostName = "";
+	m_loadConfigAfter = millis() + 5000;
 }
-
 
 boolean ApplicationLan::publish(const char *payload, const char *topic /* = NULL */)
 {
+	Application::publish(payload, topic);
+
 	#ifdef SHP_MQTT
-	if (eth_connected && mqttClient->connected())
+	if (eth_connected && mqttClient->state() == MQTT_CONNECTED)
 	{
 		boolean res = false;
 
@@ -444,11 +528,32 @@ boolean ApplicationLan::publish(const char *payload, const char *topic /* = NULL
 
     return res;
 	}
+	#else
+		#ifdef SHP_INTERNET_MODE
+		String url = "https://" + m_cfgServerHostName + "/feed/iot-api/mac:" + macHostName + "/setDeviceInfo";
+		//Serial.println("PUBLISH1 INET MODE");
+		//Serial.println("========== PUBLISH URL: "+url);
+		//Serial.println(payload);
+		//Serial.println("========== PUBLISH TOPIC: "+String(topic));
+
+		WiFiClientSecure client;
+		client.setInsecure();
+		HTTPClient http;
+		http.setReuse(false);
+		http.begin(client, url);
+		http.addHeader("X-IOT-TOPIC", topic);
+		http.addHeader("Content-Type", "text/plain");
+		int httpCode = http.POST(payload);
+		http.end();
+		#endif
+
+		return true;
 	#endif
+
 	return false;
 }
 
-void ApplicationLan::publishData(uint8_t sendMode)
+void ApplicationLan::publishData(uint8_t sendMode, const char *payload /* = NULL */)
 {
 	if (sendMode == SM_NONE)
 		return;
@@ -458,25 +563,57 @@ void ApplicationLan::publishData(uint8_t sendMode)
 		return;
 	}
 
-	String payload;
-	serializeJson(m_iotBoxInfo, payload);
+	Serial.println("-- PUBLISH DATA LAN1 --");
+
+	String pld;
+	serializeJson(m_iotBoxInfo, pld);
 
 	#ifdef SHP_MQTT
-	if (eth_connected && mqttClient->connected())
+	if (eth_connected && mqttClient->state() == MQTT_CONNECTED)
 	{
+		Serial.println("-- PUBLISH DATA LAN2 --");
+
 		boolean res = false;
 
-		res = mqttClient->publish(m_actionTopic.c_str(), payload.c_str(), false);
+		res = mqttClient->publish(m_actionTopic.c_str(), pld.c_str(), false);
+
+		Serial.print("====== PUBLISH DATA: ");
+		Serial.println(m_actionTopic.c_str());
+		Serial.println(pld.c_str());
+		Serial.println("--- publish done ---");
 
 		if (!res)
 		{
-			//Serial.println("PUBLISH FAILED!!!");
 			checkMqtt();
-			res = mqttClient->publish(m_actionTopic.c_str(), payload.c_str(), false);
+			res = mqttClient->publish(m_actionTopic.c_str(), pld.c_str(), false);
 		}
+
+		Application::publishData(sendMode, pld.c_str());
 
 		return;
 	}
+	#else
+		Application::publishData(sendMode, pld.c_str());
+
+		#ifdef SHP_INTERNET_MODE
+		String url = "https://" + m_cfgServerHostName + "/feed/iot-api/mac:" + macHostName + "/setDeviceInfo";
+
+		//Serial.println("PUBLISH2 INET MODE");
+		//Serial.println("========== PUBLISH URL: "+url);
+		//Serial.println(pld);
+		//Serial.println("========== PUBLISH TOPIC: "+m_actionTopic);
+
+
+		WiFiClientSecure client;
+		client.setInsecure();
+		HTTPClient http;
+		http.setReuse(false);
+		http.begin(client, url);
+		http.addHeader("X-IOT-TOPIC", m_actionTopic.c_str());
+		http.addHeader("Content-Type", "application/json");
+		int httpCode = http.POST(pld);
+		http.end();
+		#endif
 	#endif
 }
 
@@ -491,10 +628,10 @@ void ApplicationLan::loop()
 	#ifdef SHP_MQTT
   if (!mqttClient->loop())
 	{
-		if (m_hbLedStatus != hbLEDStatus_WaitForCfg)
+		if (m_hbLedStatus != hbLEDStatus_WaitForCfg && m_hbLedStatus != hbLEDStatus_Unconfigured)
 			setHBLedStatus(hbLEDStatus_WaitForCfg);
 
-		if (m_mqttReconnectAttempAfter && m_mqttReconnectAttempAfter > millis())
+		if (m_mqttReconnectAttempAfter && m_mqttReconnectAttempAfter < millis())
 			checkMqtt();
 	}
 	#endif
@@ -504,18 +641,149 @@ void ApplicationLan::loop()
 
 void ApplicationLan::initNetworkInfo()
 {
+	#ifdef SHP_ETH
+	ipLocal = ETH.localIP();
+	macHostName = ETH.macAddress();
+	#endif
+
+	#ifdef SHP_WIFI
+	ipLocal = WiFi.localIP();
+	macHostName = WiFi.macAddress();
+	#endif
+
+	macHostName.replace(':', '-');
+	macHostName.toLowerCase();
+
+	// -- load servers config
+	//app->log(shpllStatus, "Loading servers config from preferences");
+	m_prefs.begin("ibCfgServers");
+	String serversCfgData = m_prefs.getString("config", "");
+	m_prefs.end();
+
+	if (serversCfgData.length() == 0)
+	{
+		//app->log(shpllError, "Servers config is empty, please check your configuration");
+		m_serversConfig.clear();
+
+		return;
+	}
+
+	DeserializationError error = deserializeJson(m_serversConfig, serversCfgData.c_str());
+	if (error)
+	{
+		app->log(shpllError, "Servers config is not valid, error: `%s`; content: `%s`", error.c_str(), serversCfgData.c_str());
+		m_serversConfig.clear();
+	}
+	else
+	{
+		if (m_serversConfig.containsKey("api"))
+			m_cfgServerHostName = (const char*)m_serversConfig["api"];
+		else if (m_serversConfig.containsKey("http"))
+			m_cfgServerHostName = (const char*)m_serversConfig["http"];
+		if (m_serversConfig.containsKey("apiPort"))
+		{
+			m_cfgServerHostName.concat(":");
+			m_cfgServerHostName.concat((const char*)m_serversConfig["apiPort"]);
+		}
+
+		if (m_serversConfig.containsKey("mqtt"))
+		{
+			m_mqttServerHostName = (const char*)m_serversConfig["mqtt"];
+		}
+		//else
+		//	m_mqttServerHostName = "10.32.9.2";//(const char*)m_serversConfig["mqtt"];
+
+		app->log(shpllStatus, "Servers config loaded, API server: `%s`, MQTT server: `%s`", m_cfgServerHostName.c_str(), m_mqttServerHostName.c_str());
+	}
+
 	m_networkInfoInitialized = true;
+	m_serverConnected = true;
+
+	m_SendIotBoxInfoTimeout = 15 * 60 * 1000; // 15 minutes
+
+	#ifdef SHP_INTERNET_MODE
+		Serial.println("INTERNET MODE");
+
+
+		//iotBoxInfo();
+
+		return;
+	#endif // SHP_INTERNET_MODE
+
+	/*
+	if (m_cfgServerHostName == "")
+	{
+		m_cfgServerHostName = "";
+
+		char testSrvName[64];
+		struct addrinfo* result;
+		int error;
+
+		sprintf(testSrvName, "shp-iot-cfg-server-%d-%d-%d", ipLocal[0], ipLocal[1], ipLocal[2]);
+		error = getaddrinfo(testSrvName, NULL, NULL, &result);
+		if(error == 0)
+		{
+			m_cfgServerHostName = testSrvName;
+			freeaddrinfo(result);
+		}
+		else
+		{
+			strcpy(testSrvName, "shp-iot-cfg-server");
+			error = getaddrinfo(testSrvName, NULL, NULL, &result);
+			if(error == 0)
+			{
+				m_cfgServerHostName = testSrvName;
+				freeaddrinfo(result);
+			}
+			else
+			{
+				IPAddress cfgSrv = ipLocal;//ETH.localIP();
+				cfgSrv[3] = 2;
+				m_cfgServerHostName = cfgSrv.toString();
+			}
+		}
+
+		Serial.print("m_cfgServerHostName: ");
+		Serial.println(m_cfgServerHostName);
+
+		m_mqttServerHostName = m_cfgServerHostName;
+
+		m_networkInfoInitialized = true;
+	}
+		*/
 }
 
 void ApplicationLan::IP_Got()
 {
-	m_boxConfigLoaded = false;
 	m_networkInfoInitialized = false;
+
+	#ifdef SHP_MQTT
+	if (mqttClient && !mqttClient->connected())
+		m_mqttReconnectAttempAfter = millis() + 3000;
+	#endif
+
 	setHBLedStatus(hbLEDStatus_NetworkAddressReady);
 }
 
 void ApplicationLan::IP_Lost()
 {
-	//signalLedOn();
+	setHBLedStatus(hbLEDStatus_NetworkInitialized);
+}
+
+void ApplicationLan::checkBeforeSleep()
+{
+	publishData(SM_NOW);
+
+	#ifdef SHP_MQTT
+  if (mqttClient)
+	{
+		Serial.println("mqttClient->loop");
+		mqttClient->loop();
+	}
+	#endif
+
+	Application::checkBeforeSleep();
+
+	delay(200);
 }
 

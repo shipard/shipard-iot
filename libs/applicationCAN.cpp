@@ -28,17 +28,19 @@ void ApplicationCAN::doFwUpgradeRequest(String payload)
 
 boolean ApplicationCAN::publish(const char *payload, const char *topic /* = NULL */)
 {
+	/*
 	Serial.println("ApplicationCAN::publish:");
 	Serial.println(topic);
 	Serial.println(payload);
 	Serial.println("---");
+	*/
 
 	m_client->publish(payload, topic);
 
   return true;
 }
 
-void ApplicationCAN::publishData(uint8_t sendMode)
+void ApplicationCAN::publishData(uint8_t sendMode, const char *payload /* = NULL */)
 {
 	Serial.println("publishData");
 	if (sendMode == SM_NONE)
@@ -49,10 +51,12 @@ void ApplicationCAN::publishData(uint8_t sendMode)
 		return;
 	}
 
-	String payload;
-	serializeJson(m_iotBoxInfo, payload);
+	String pld;
+	serializeJson(m_iotBoxInfo, pld);
 
-	app->publish(payload.c_str(), m_actionTopic.c_str());
+	app->publish(pld.c_str(), m_actionTopic.c_str());
+
+	//Application::publishData(sendMode, pld.c_str());
 }
 
 void ApplicationCAN::loop()

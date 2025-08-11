@@ -17,11 +17,12 @@
 		"2": "R-G-B",
 		"3": "G-B-R",
 		"4": "B-R-G",
-		"5": "B-G-R"
+		"5": "B-G-R",
+		"6": "R-G-B-W (SK6812)"
 	}
 */
-#define LED_STRIP_COLOR_MODES_CNT 6
-static unsigned long LED_STRIP_COLOR_MODES[LED_STRIP_COLOR_MODES_CNT] = {NEO_GRB, NEO_RBG, NEO_RGB, NEO_GBR, NEO_BRG, NEO_BGR};
+#define LED_STRIP_COLOR_MODES_CNT 7
+static unsigned long LED_STRIP_COLOR_MODES[LED_STRIP_COLOR_MODES_CNT] = {NEO_GRB, NEO_RBG, NEO_RGB, NEO_GBR, NEO_BRG, NEO_BGR, NEO_GRBW};
 
 
 class ShpControlLedStrip : public ShpIOPort

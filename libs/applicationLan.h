@@ -16,7 +16,7 @@ class ApplicationLan : public Application
 
 		virtual void doFwUpgradeRequest(String payload);
 		virtual boolean publish(const char *payload, const char *topic = NULL);
-		virtual void publishData(uint8_t sendMode);
+		virtual void publishData(uint8_t sendMode, const char *payload = NULL);
 
 		virtual void loadBoxConfig();
 
@@ -31,17 +31,28 @@ class ApplicationLan : public Application
 
 		virtual int getDeviceCfg(uint8_t *hwId, String& data);
 
+		virtual void checkBeforeSleep();
+
 	public:
+
+		String m_cfgServerHostName;
+		String m_mqttServerHostName;
 
 		WiFiClient lanClient;
 		#ifdef SHP_MQTT
 		PubSubClient *mqttClient;
 		#endif
 
-		boolean m_networkInfoInitialized;
+		volatile boolean m_networkInfoInitialized;
 		unsigned long m_mqttReconnectAttempAfter;
+		unsigned long m_loadConfigAfter;
 		static bool eth_connected;
 		IPAddress ipLocal;
+
+		#ifdef SHP_WIFI
+		ShpWiFiConnector *m_wifiConnector;
+		#endif
+
 
 };
 

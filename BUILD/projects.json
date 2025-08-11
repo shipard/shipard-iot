@@ -28,6 +28,55 @@
 			"variants": {
 				"sms72-esp32-can": {
 					"title": "sms72-esp32-can"
+				},
+				"sms50-esp32-can": {
+					"title": "sms50-esp32-can"
+				}
+			}
+		},
+		"iot-box-uart-core": {
+			"title": "sms-uart-core" ,
+			"variants": {
+				"sms-uart-esp32": {
+					"title": "sms-uart-esp32"
+				},
+				"sms-uart-esp32S3": {
+					"title": "sms-uart-esp32S3"
+				}
+			}
+		},
+		"iot-box-epd-wifi": {
+			"title": "epd-wifi" ,
+			"variants": {
+				"epd-esp32-wifi-GxEPD2_750c": {
+					"title": "epd-esp32-wifi-GxEPD2_750c"
+				},
+				"epd-esp32S3-wifi-GxEPD2_750c": {
+					"title": "epd-esp32S3-wifi-GxEPD2_750c"
+				},
+				"epd-esp32-wifi-GxEPD2_750c_Z08": {
+					"title": "epd-esp32-wifi-GxEPD2_750c_Z08"
+				},
+				"epd-esp32S3-wifi-GxEPD2_750c_Z08": {
+					"title": "epd-esp32S3-wifi-GxEPD2_750c_Z08"
+				},
+				"epd-esp32-wifi-GxEPD2_266c_GDEY0266F51H": {
+					"title": "epd-esp32-wifi-GxEPD2_266c_GDEY0266F51H"
+				},
+				"epd-esp32-wifi-GxEPD2_583_GDEQ0583T31": {
+					"title": "epd-esp32-wifi-GxEPD2_583_GDEQ0583T31"
+				},
+				"epd-esp32-wifi-GxEPD2_730c_GDEY073D46": {
+					"title": "epd-esp32-wifi-GxEPD2_730c_GDEY073D46"
+				},
+				"epd-esp32-wifi-GxEPD2_420c": {
+					"title": "epd-esp32-wifi-GxEPD2_420c"
+				},
+				"epd-esp32-wifi-GxEPD2_1248c": {
+					"title": "epd-esp32-wifi-GxEPD2_1248c"
+				},
+				"epd-esp32-wifi-GxEPD2_1248": {
+					"title": "epd-esp32-wifi-GxEPD2_1248"
 				}
 			}
 		}

@@ -1,10 +1,24 @@
+#ifdef ESP32
+#include "soc/soc.h"
+#include "soc/rtc_cntl_reg.h"
+#endif
+#include "driver/touch_sensor.h"
+
+
+
 extern SHP_APP_CLASS *app;
 
+bool g_touchChanged = false;
+void touchChange()
+{
+  g_touchChanged = true;
+}
 
 ShpInputCapBtn::ShpInputCapBtn() :
 																	m_pin(-1),
                                   m_treshold(40),
                                   m_ledStripPixel(0),
+                                  m_needSend(false),
 																	m_measureInterval(20),
 																	m_nextMeasure(0),
                                   m_debounceDelay(100),
@@ -44,6 +58,12 @@ void ShpInputCapBtn::init(JsonVariant portCfg)
 	if (m_treshold <= 0 || m_treshold > 900000)
 		m_treshold = 40;
 
+  m_treshold = 41000;
+
+  attachInterrupt(m_pin, touchChange, RISING);
+  //attachInterrupt(m_pin, std::bind(&ShpInputCapBtn::onPinChange, this, m_pin), RISING);
+  //touchAttachInterrupt((touch_pad_t)m_pin, std::bind(&ShpInputCapBtn::onPinChange, this, m_pin), 100000);
+
 	// -- portId buzzer
 	if (portCfg.containsKey("portIdBuzzer"))
 	{
@@ -62,73 +82,45 @@ void ShpInputCapBtn::init(JsonVariant portCfg)
   Serial.println(m_treshold);
 
 	m_sendMode = SM_LOOP;
+
+  //
+
+  if (0)
+  {
+    //touchAttachInterrupt(TOUCH_PAD_NUM5, NULL, 128000);
+    //touch_pad_sleep_set_threshold(TOUCH_PAD_NUM5, 10000);
+    //touchSleepWakeUpEnable(T3, 100000);
+    //esp_sleep_enable_touchpad_wakeup();
+    //Serial.println("touch_pad_sleep_set_threshold");
+  }
 }
+
+void ShpInputCapBtn::onPinChange(int pin)
+{
+	//if (m_disable)
+	//	return;
+	m_needSend = true;
+	//m_disable = true;
+	//m_lastChangeMillis = millis();
+}
+
 
 void ShpInputCapBtn::loop()
 {
 	ShpIOPort::loop();
 
-	unsigned long now = millis();
-	if (now < m_nextMeasure)
-		return;
-
-	int newValue = touchRead(m_pin);
-  //Serial.println(newValue);
-
-  bool reading = newValue < m_treshold;
-
-  if (reading != m_lastTouchState)
+  if (g_touchChanged)
   {
-    m_lastDebounceTime = millis();
+    const char *pv = "1";
+    app->publishAction(m_portId, pv);
+    Serial.println("TOUCH!!!");
+    g_touchChanged = false;
+    //m_lastValue = m_detectedValue;
+    //m_waitForChange = true;
+    return;
   }
 
-  if ((millis() - m_lastDebounceTime) > m_debounceDelay)
-	{
-    //Serial.println(newValue);
-    if (reading != m_touchState)
-    {
-      m_touchState = reading;
 
-      char buffer[] = "1";
-      if (!m_touchState)
-        buffer[0] = '0';
-
-      if (m_sendAsAction)
-        app->publishAction(m_portId, buffer);
-      else
-      {
-        if (!app->publish(buffer, m_valueTopic.c_str()))
-          return;
-      }
-
-      if (m_touchState && m_portIdBuzzer != "")
-      {
-        ShpIOPort *ioPortBuzzer = app->ioPort(m_portIdBuzzer.c_str());
-        if (ioPortBuzzer)
-        {
-          ioPortBuzzer->onMessage((byte*)"P50", 3, NULL);
-        }
-      }
-      if (m_portIdLedStrip != "")
-      {
-        ShpIOPort *ioPortLedStrip = app->ioPort(m_portIdLedStrip.c_str());
-        if (ioPortLedStrip)
-        {
-          if (m_touchState)
-          {
-            char ledCmd[80];
-            sprintf(ledCmd, "pixel:%d:%s", m_ledStripPixel, m_ledStripPixelColor.c_str());
-            ioPortLedStrip->onMessage((byte*)ledCmd, strlen(ledCmd), NULL);
-          }
-          else
-          {
-            ioPortLedStrip->onMessage((byte*)"resume:0", 9, NULL);
-          }
-        }
-      }
-    }
-	}
-  m_lastTouchState = reading;
 
 	m_nextMeasure = millis() + m_measureInterval;
 }

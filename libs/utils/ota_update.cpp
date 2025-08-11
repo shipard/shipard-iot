@@ -136,7 +136,7 @@ void ShpOTAUpdate::doFwUpgradeRequest(String payload)
 
 	app->log(shpllStatus, "[UPGRADE] request done. Rebooting after 3 sec...");
 	usleep(3000000);
-	app->reboot();
+	app->doReboot();
 }
 
 void ShpOTAUpdate::clearUpgradeRequest()

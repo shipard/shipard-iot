@@ -37,6 +37,7 @@
 #include <controls/controlLevel.cpp>
 #include <controls/controlBistRelay.cpp>
 #include <controls/controlHBridge.cpp>
+#include <controls/controlMatrix.cpp>
 
 #include <inputs/inputAnalog.cpp>
 #include <inputs/inputCapBtn.cpp>
@@ -44,12 +45,21 @@
 #include <inputs/inputCounter.cpp>
 
 #include <sensors/sensorDistanceUS.cpp>
+
+#ifdef SHP_SENSOR_LD2410
 #include <sensors/LD2410.cpp>
+#endif
+
+#ifdef SHP_POWER_BATT_CHARGER
+#include <power/usb/usbBatteryCharger.cpp>
+#endif
 
 #ifdef ESP32
 #include <meteo/meteoDHT.cpp>
 #endif
 #include <meteo/meteoBME280.cpp>
+#include <meteo/meteoBMP280.cpp>
+#include <meteo/meteoSHT40.cpp>
 #include <meteo/meteoBH1750.cpp>
 
 #include <bus/busI2C.cpp>
@@ -60,13 +70,18 @@
 
 #include <display/display.cpp>
 
+
+#include <clients/uart/clientUART.cpp>
+
 #ifdef SHP_NETWORK_LAN
 #include <display/displayNextion.cpp>
 #endif
 
 #ifdef SHP_NETWORK_LAN
 #include <routers/OTAUpdateSlowSender.cpp>
-#include <routers/can/routerCAN.cpp>
+  #ifndef SHP_DISABLE_CAN_ROUTER
+    #include <routers/can/routerCAN.cpp>
+  #endif
 #endif
 
 #ifdef SHP_NETWORK_LAN
@@ -85,6 +100,11 @@
 #ifdef SHP_ETH
 #include <ETH.cpp>
 #endif
+
+#ifdef SHP_WIFI
+#include <networks/wifi/WiFiConnector.cpp>
+#endif
+
 
 
 #ifdef SHP_CAM_ESP32

@@ -1,37 +1,27 @@
 extern SHP_APP_CLASS *app;
 
-ShpMeteoBME280::ShpMeteoBME280() :
+ShpMeteoBMP280::ShpMeteoBMP280() :
 																	m_address(-1),
 																	m_bus(NULL),
 																	m_sensor(NULL),
+																	m_sensor_temp(NULL),
+																	m_sensor_pressure(NULL),
 																	m_sensorStarted(false),
 																	m_measureInterval(60000),
 																	m_nextMeasure(0),
 																	m_needSend(false),
 																	m_temperature(0.0),
-																	m_humidity(0.0),
 																	m_pressure(0.0)
 {
 }
 
-void ShpMeteoBME280::init(JsonVariant portCfg)
+void ShpMeteoBMP280::init(JsonVariant portCfg)
 {
-	/* config format:
-	 * --------------------------
-	 	{
-			"type": "meteoBME280",
-			"portId": "uio-5-1",
-			"i2cBusPortId": "i2c_1",
-			"address": "77"
-		}
-	-----------------------------*/
-
 	m_address = 0x77;
 
 	ShpIOPort::init(portCfg);
 
 	m_topicTemperature = m_valueTopic + "temperature/" + app->m_deviceId + "/" + m_portId;
-	m_topicHumidity = m_valueTopic + "humidity/" + app->m_deviceId + "/" + m_portId;
 	m_topicPressure = m_valueTopic + "pressure/" + app->m_deviceId + "/" + m_portId;
 
 	// -- busPortid
@@ -63,7 +53,7 @@ void ShpMeteoBME280::init(JsonVariant portCfg)
 	m_valid = true;
 }
 
-void ShpMeteoBME280::init2()
+void ShpMeteoBMP280::init2()
 {
 	if (!m_valid || !m_busPortId)
 		return;
@@ -72,7 +62,7 @@ void ShpMeteoBME280::init2()
 
 	if (m_bus)
 	{
-		m_sensor = new Adafruit_BME280();
+		m_sensor = new Adafruit_BMP280(m_bus->wire());
 	}
 	else
 	{
@@ -81,7 +71,7 @@ void ShpMeteoBME280::init2()
 }
 
 
-void ShpMeteoBME280::loop()
+void ShpMeteoBMP280::loop()
 {
 	ShpIOPort::loop();
 
@@ -94,36 +84,37 @@ void ShpMeteoBME280::loop()
 
 	if (!m_sensorStarted)
 	{
-		m_sensorStarted = m_sensor->begin(m_address, m_bus->wire());
+		m_sensorStarted = m_sensor->begin();
 		if (!m_sensorStarted)
 		{
-			log (shpllError, "BME280 not started");
+			log (shpllError, "SHT40 not started");
 			m_nextMeasure = now + 3 * m_measureInterval;
 			return;
 		}
+		m_sensor_pressure = m_sensor->getPressureSensor();
+		m_sensor_temp = m_sensor->getTemperatureSensor();
+		m_sensor->setSampling(Adafruit_BMP280::MODE_NORMAL,
+													 Adafruit_BMP280::SAMPLING_X2,
+													 Adafruit_BMP280::SAMPLING_X16,
+													 Adafruit_BMP280::FILTER_X16,
+													 Adafruit_BMP280::STANDBY_MS_500);
 	}
 
-	m_temperature = m_sensor->readTemperature();
-	m_humidity = m_sensor->readHumidity();
-	m_pressure = m_sensor->readPressure() / 100 + 32;
+	sensors_event_t pressure, temp;
+	m_sensor_temp->getEvent(&temp);
+	m_sensor_pressure->getEvent(&pressure);
+	m_temperature = temp.temperature;
+	m_pressure = pressure.pressure;
 
 	static char b[16];
 
 	sprintf(b, "%.1f", m_temperature);
 	app->publish(b, m_topicTemperature.c_str());
 
-	sprintf(b, "%.1f", m_humidity);
-	app->publish(b, m_topicHumidity.c_str());
-
 	sprintf(b, "%.1f", m_pressure);
 	app->publish(b, m_topicPressure.c_str());
 
-
-	Serial.printf("BME280 (%ld):\n", millis());
-	Serial.println(m_temperature);
-	Serial.println(m_humidity);
-	Serial.println(m_pressure);
-
-
 	m_nextMeasure = now + m_measureInterval;
 }
+
+

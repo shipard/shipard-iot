@@ -171,7 +171,7 @@ void ShpEspNowServer::sendDeviceCfg()
 	Serial.println("send device cfg start");
 
 		// -- LOAD CFG FROM SERVER
-  String url = "http://" + app->cfgServerHostName + "/cfg/" + m_sendDeviceCfgId + ".json";
+  String url = "http://" + app->m_cfgServerHostName + "/cfg/" + m_sendDeviceCfgId + ".json";
   Serial.println("========== CFG URL: "+url);
 
   String data;

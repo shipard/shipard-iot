@@ -96,7 +96,7 @@ void ShpRouterCAN::init(JsonVariant portCfg)
 
 void ShpRouterCAN::init2()
 {
-  for (int i = 0; i < m_maxDevicesCount; i++)
+  for (int i = 0; i < m_devicesCount; i++)
   {
     app->subscribeIOPortTopic (m_appPortIndex, m_devices[i].topic);
   }

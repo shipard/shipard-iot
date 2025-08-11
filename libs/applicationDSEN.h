@@ -13,9 +13,9 @@ class ApplicationDSEN : public Application
 		virtual void setup();
 		virtual void loop();
 		virtual boolean publish(const char *payload, const char *topic = NULL);
-		virtual void publishData(uint8_t sendMode);
+		virtual void publishData(uint8_t sendMode, const char *payload = NULL);
 
-		bool setIotBoxFromStoredCfg();
+		//bool setIotBoxFromStoredCfg();
 
 		//virtual boolean publish(const char *payload, const char *topic = NULL);
 		//virtual void publishData(uint8_t sendMode);

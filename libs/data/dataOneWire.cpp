@@ -1,10 +1,10 @@
 extern SHP_APP_CLASS *app;
 
 
-ShpDataOneWire::ShpDataOneWire() : 
-																	m_oneWire(NULL), 
-																	m_sensors(NULL), 
-																	m_pin(-1), 
+ShpDataOneWire::ShpDataOneWire() :
+																	m_oneWire(NULL),
+																	m_sensors(NULL),
+																	m_pin(-1),
 																	m_readInterval(60 * 1000),
 																	m_lastRead(0),
 																	m_countDevices(0),
@@ -41,8 +41,8 @@ void ShpDataOneWire::init(JsonVariant portCfg)
 
 void ShpDataOneWire::loop()
 {
-	unsigned long thisRead = millis();	
-	
+	unsigned long thisRead = millis();
+
 	if (thisRead - m_lastRead < m_readInterval)
 		return;
 
@@ -95,7 +95,7 @@ void ShpDataOneWire::scanDevices()
 	//m_oneWire->reset_search();
 
 	m_sensors->begin();
-	
+
 	m_countDevices = m_sensors->getDeviceCount();
 
 	log (shpllInfo, "%d sensors found", m_countDevices);
@@ -124,13 +124,13 @@ void ShpDataOneWire::scanDevices()
 			strcat(m_sensorsStates[i].topic, "/");
 			strcat(m_sensorsStates[i].topic, m_sensorsStates[i].deviceAddressStr);
 		}
-		else 
+		else
 		{
 			Serial.print("Found ghost device at ");
 			Serial.print(i, DEC);
 			Serial.println (" but could not detect address. Check power and cabling...");
 		}
-	}	
+	}
 }
 
 void ShpDataOneWire::readValues()
@@ -148,7 +148,7 @@ void ShpDataOneWire::readValues()
 		if (1)
 		{
 			payload.clear();
-			
+
 			/* -- json way
 			dataRec["id"] = m_sensorsStates[i].deviceAddressStr;
 			dataRec["value"] = m_sensorsStates[i].newTemp;
@@ -158,13 +158,13 @@ void ShpDataOneWire::readValues()
 
 			payload.concat(m_sensorsStates[i].newTemp);
 			app->publish(payload.c_str(), m_sensorsStates[i].topic);
-			
+
 			m_sensorsStates[i].pastTemp = m_sensorsStates[i].newTemp;
 		}
 	}
 }
 
-void ShpDataOneWire::sensorAddressStr(DeviceAddress deviceAddress, char address[]) 
+void ShpDataOneWire::sensorAddressStr(DeviceAddress deviceAddress, char address[])
 {
 	const char hex_str[]= "0123456789abcdef";
 
