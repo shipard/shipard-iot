@@ -131,8 +131,8 @@ void ShpEpdDisplay::parseFileHeader (const uint8_t *hdr)
     m_sleepReloadInterval = reloadInterval * 60; // convert minutes to seconds
   }
 
-  Serial.printf("### SLEEP mode:%d, interval1:%d, interval2:%d\n", m_sleepReloadMode, reloadInterval, m_sleepReloadInterval);
-  Serial.printf("### IMG w:%d, h:%d, o:%d\n", m_imgWidth, m_imgHeight, m_imgOrientation);
+  //Serial.printf("### SLEEP mode:%d, interval1:%d, interval2:%d\n", m_sleepReloadMode, reloadInterval, m_sleepReloadInterval);
+  //Serial.printf("### IMG w:%d, h:%d, o:%d\n", m_imgWidth, m_imgHeight, m_imgOrientation);
 
   if (m_imgOrientation == 1)
     display.setRotation(1);
@@ -157,7 +157,7 @@ void ShpEpdDisplay::clearImgInfo()
 
 void ShpEpdDisplay::loadNewImageVersion()
 {
-  String url = "https://"+app->m_cfgServerHostName+"/feed/esigns-api/mac:" + app->macHostName + "/getESignImageVersion/" + m_portId;
+  String url = "https://"+app->m_cfgServerHostName+"/feed/esigns-api/mac:" + app->macHostName + "/getESignImageVersion/" + m_portId + "/" + g_lastImgVersion;
 
   WiFiClientSecure *client = new WiFiClientSecure;
   client->setInsecure(); // Disable SSL certificate verification for testing purposes
@@ -177,7 +177,7 @@ void ShpEpdDisplay::loadNewImageVersion()
       m_newImageVersion = atoi(data.c_str());
       m_loadNewImageVersionDone = true;
 
-      Serial.printf("### New Image Version: %d\n", m_newImageVersion);
+      //Serial.printf("### New Image Version: %d\n", m_newImageVersion);
     }
   }
   else
@@ -248,23 +248,35 @@ void ShpEpdDisplay::loadImage()
     }
     m_imageLoaded = true;
   }
-  http.end();
-
   long millisEnd = millis();
-  Serial.printf("; load image duration: %ld ms", millisEnd - millisBegin);
-  Serial.println("; load image done!");
+  //Serial.printf("; load image duration1: %ld ms", millisEnd - millisBegin);
+  http.end();
+  //millisEnd = millis();
+  //Serial.printf("; load image duration2: %ld ms", millisEnd - millisBegin);
+
+//  Serial.printf("; load image duration: %ld ms", millisEnd - millisBegin);
+//  Serial.println("; load image done!");
 }
 
 void ShpEpdDisplay::displayImage()
 {
+  if (!m_imgData)
+  {
+    Serial.println("### Invalid image data; image is not loaded");
+    m_imageDisplayed = true;
+
+    return;
+  }
+
   if (m_newImageVersion == g_lastImgVersion)
   {
-    Serial.printf("### Image not changed; ver: %d\n", g_lastImgVersion);
+    //Serial.printf("### Image not changed; ver: %d\n", g_lastImgVersion);
     app->m_doCheckAutoSleep = true;
     m_imageDisplayed = true;
 
     return;
   }
+
 
   // void GxEPD2_1248c::init(uint32_t serial_diag_bitrate, bool initial, uint16_t reset_duration, bool pulldown_rst_mode)
   //display.init(115200, true, 2, false);
@@ -281,7 +293,7 @@ void ShpEpdDisplay::displayImage()
   m_imageDisplayed = true;
 
   g_lastImgVersion = m_newImageVersion;
-  Serial.printf("### Image Version is now: %d\n", g_lastImgVersion);
+  //Serial.printf("### Image Version is now: %d\n", g_lastImgVersion);
 
   if (m_imgData)
   {
@@ -313,6 +325,7 @@ void ShpEpdDisplay::loop()
 {
 	ShpIOPort::loop();
 
+  /*
   if (app->m_lowPowerDevice && millis() > 5 * 60 * 1000)
   {
     if (app->m_lowPowerDeviceCharging)
@@ -328,6 +341,7 @@ void ShpEpdDisplay::loop()
     shutdown();
     return;
   }
+  */
 
   if (!app->m_serverConnected)
     return;
@@ -377,7 +391,7 @@ void ShpEpdDisplay::showBitmap_PSRAM()
 {
   uint16_t colorMap[] = epdColorMap;
 
-  Serial.printf("showBitmap - width: %d, height: %d \n", m_imgWidth, m_imgHeight);
+  //Serial.printf("showBitmap - width: %d, height: %d \n", m_imgWidth, m_imgHeight);
 
   uint16_t displayPosX = 0;
   uint16_t displayPosY = 0;

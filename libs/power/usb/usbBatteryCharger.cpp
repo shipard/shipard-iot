@@ -207,7 +207,7 @@ void ShpPowerBattUSBCharger::loop()
 	//if (!m_needSend)
 	//	return;
 
-	Serial.println("USB/BATT - publish data:");
+	//Serial.println("USB/BATT - publish data:");
 
 	float minBatteryVoltage = 3.2;
 	int bp = 0;

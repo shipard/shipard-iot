@@ -25,6 +25,8 @@ void ShpWiFiConnector::start()
     return;
   }
 
+  WiFi.setHostname(app->m_deviceId.c_str());
+
   setWiFiSSID(0);
 
 

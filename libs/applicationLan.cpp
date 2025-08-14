@@ -45,6 +45,9 @@ void WiFiEvent2(WiFiEvent_t event)
 		case ARDUINO_EVENT_WIFI_STA_CONNECTED:
       Serial.println("WiFi Connected");
       break;
+		case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
+      Serial.println("WiFi Disconnected");
+			break;
 		#ifdef SHP_ETH
     case ARDUINO_EVENT_ETH_GOT_IP:
       Serial.print("ETH GOT IP; MAC: ");
@@ -363,12 +366,8 @@ void ApplicationLan::setup()
 				wifiManager.autoConnect("", "aassddffgg");
 			}
 		#else
-			//delay(1000);
-			Serial.print("connect to wifi: ");
 			WiFi.onEvent(WiFiEvent2);
-
 			m_wifiConnector = new ShpWiFiConnector();
-
 
 			/*
 			WiFi.enableIpV6();
@@ -563,7 +562,7 @@ void ApplicationLan::publishData(uint8_t sendMode, const char *payload /* = NULL
 		return;
 	}
 
-	Serial.println("-- PUBLISH DATA LAN1 --");
+	//Serial.println("-- PUBLISH DATA LAN1 --");
 
 	String pld;
 	serializeJson(m_iotBoxInfo, pld);
@@ -625,6 +624,11 @@ void ApplicationLan::doFwUpgradeRequest(String payload)
 
 void ApplicationLan::loop()
 {
+	#ifdef SHP_WIFI
+	if (m_wifiConnector)
+		m_wifiConnector->loop();
+	#endif
+
 	#ifdef SHP_MQTT
   if (!mqttClient->loop())
 	{
@@ -703,10 +707,7 @@ void ApplicationLan::initNetworkInfo()
 
 	#ifdef SHP_INTERNET_MODE
 		Serial.println("INTERNET MODE");
-
-
 		//iotBoxInfo();
-
 		return;
 	#endif // SHP_INTERNET_MODE
 

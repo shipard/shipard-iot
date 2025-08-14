@@ -205,6 +205,7 @@ protected:
 		bool m_lowPowerDevice;
 		bool m_lowPowerDeviceCharging;
 		long m_TotalLoops;
+		int m_iotBoxInfoCounter;
 
 		long m_SendIotBoxInfoTimeout;
 		long m_SendIotBoxInfoNextSend;

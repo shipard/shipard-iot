@@ -12,6 +12,10 @@
 
 extern SHP_APP_CLASS *app;
 
+RTC_DATA_ATTR int g_lastRunTimeTotal = 0;
+RTC_DATA_ATTR int g_lastRunTimeRadio = 0;
+
+
 
 Application::Application() : 	m_logLevel(shpllStatus),
 															#ifdef SHP_HB_LED_MODE
@@ -36,6 +40,7 @@ Application::Application() : 	m_logLevel(shpllStatus),
 															m_cmdQueueRequests(0),
 															m_publishDataOnNextLoop(false),
 															m_TotalLoops(0),
+															m_iotBoxInfoCounter(0),
 															m_useSerialComm(1),
 															m_clientUART(NULL),
 															m_lowPowerDevice(false),
@@ -722,7 +727,12 @@ void Application::doSleep()
 	}
 
 	if (m_dsWakeupTimer)
+	{
+		Serial.printf("=== Set deep sleep wakeup timer to %d secs ===\n", m_dsWakeupTimer);
 		esp_sleep_enable_timer_wakeup(m_dsWakeupTimer * 1000000);
+	}
+
+  g_lastRunTimeTotal = millis();
 
 	esp_deep_sleep_start();
 }
@@ -778,11 +788,28 @@ void Application::log(const char *msg, uint8_t level)
 
 void Application::iotBoxInfo()
 {
+	uint8_t bootMode = 0; // no boot
+	if (!m_iotBoxInfoCounter)
+	{
+		if (m_wakeUpFromSleep)
+			bootMode = 2;
+		else
+			bootMode = 1;
+	}
 	long uptime = millis() / 1000;
 	String info;
 	info.concat("{");
 	info.concat("\"devNdx\": "); info.concat((int)m_boxConfig["deviceNdx"]); info.concat(",");
 	info.concat("\"devId\": \"" + m_deviceId + "\",");
+	info.concat("\"boot\":"); info.concat(bootMode); info.concat(",");
+	info.concat("\"ibcnt\":"); info.concat(m_iotBoxInfoCounter); info.concat(",");
+
+	if (g_lastRunTimeTotal)
+	{
+		info.concat("\"lastRunTime\":"); info.concat(g_lastRunTimeTotal); info.concat(",");
+		g_lastRunTimeTotal = 0;
+	}
+
 	#ifdef SHP_WIFI
 	info.concat("\"macW\": \"" + WiFi.macAddress() + "\",");
 	info.concat("\"rssiW\": " + String(WiFi.RSSI()) + ",");
@@ -803,6 +830,8 @@ void Application::iotBoxInfo()
 	info.concat("}");
 
 	publish(info.c_str(), MQTT_TOPIC_DEVICES_INFO);
+
+	m_iotBoxInfoCounter++;
 }
 
 void Application::getIotBoxCfg()
@@ -971,6 +1000,15 @@ void Application::loop()
 	}
 
 	unsigned long now = millis();
+
+	if (m_lowPowerDevice && !m_doCheckAutoSleep && !app->m_lowPowerDeviceCharging && now > 5 * 60 * 1000)
+	{
+		Serial.printf("=== EMERGENCY SLEEP FOR INACTIVITY: %d ms after boot ===\n", now);
+		setDSWakeupTimer(30 * 60); // 30 minutes
+		m_doCheckAutoSleep = true;
+		return;
+	}
+
 
 	// -- io ports
 	for (int i = 0; i < m_countIOPorts; i++)
