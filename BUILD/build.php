@@ -81,10 +81,17 @@ class BuildApp
 			return;
 		}
 
-		$this->buildChannel = 'devel';
+		switch ($this->command ())
+		{
+			case	'build-live':  $this->buildChannel = 'live'; break;
+			case	'build-devel': $this->buildChannel = 'devel'; break;
+			case	'build-stable':$this->buildChannel = 'stable'; break;
+		}
+
+
 		$this->buildCommit = shell_exec("git log --pretty=format:'%h' -n 1");
 
-		$this->buildVersionId = $this->libCfg['version'].'.'.$this->buildCommit;
+		$this->buildVersionId = $this->libCfg['version'].'.'.$this->buildChannel.'.'.$this->buildCommit;
 		if (1)
 			$this->buildVersionId .= '.'.base_convert(intval((time() - 1729251912) / 60), 10, 36);
 
@@ -311,13 +318,14 @@ class BuildApp
 	{
 		switch ($this->command ())
 		{
-			case	'build':     return $this->buildAll();
+			case	'build-live':  return $this->buildAll();
+			case	'build-devel': return $this->buildAll();
+			case	'build-stable':return $this->buildAll();
 			//case	'upload':    return $this->upload();
 		}
 
 		echo ("unknown or nothing param....\n");
-		echo (" * build [--upload | --upload-local]\n");
-		//echo (" * build [--upload-local]\n");
+		echo (" * build-live|build-devel|build-stable [--upload]\n");
 		return FALSE;
 	}
 }
