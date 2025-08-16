@@ -308,12 +308,12 @@ void ShpEpdDisplay::displayImage()
 void ShpEpdDisplay::shutdown()
 {
   #ifdef SHP_EINK_PWR_PIN
-  Serial.println("SHUTDOWN EPD POWER");
+  Serial.println("SHUTDOWN EPD POWER; ");
   digitalWrite(SHP_EINK_PWR_PIN, LOW);
   delay(10);
   #endif
 
-  Serial.print("EPD PORT SHUTDOWN!");
+  Serial.println("EPD PORT SHUTDOWN!");
 
   if (m_sleepReloadInterval)
     app->setDSWakeupTimer(m_sleepReloadInterval);
@@ -324,24 +324,6 @@ void ShpEpdDisplay::shutdown()
 void ShpEpdDisplay::loop()
 {
 	ShpIOPort::loop();
-
-  /*
-  if (app->m_lowPowerDevice && millis() > 5 * 60 * 1000)
-  {
-    if (app->m_lowPowerDeviceCharging)
-    {
-      Serial.printf("=== EMERGENCY REBOOT FOR INACTIVITY: %d ===\n", app->m_TotalLoops);
-      ESP.restart();
-      return;
-    }
-
-    Serial.printf("=== EMERGENCY SLEEP FOR INACTIVITY: %d ===\n", app->m_TotalLoops);
-    app->setDSWakeupTimer(30 * 60); // 30 minutes
-    app->m_doCheckAutoSleep = true;
-    shutdown();
-    return;
-  }
-  */
 
   if (!app->m_serverConnected)
     return;

@@ -196,7 +196,7 @@ protected:
 
 		bool m_disableAutoSleep;
 		bool m_wakeUpFromSleep;
-		int m_dsWakeupTimer;
+		uint64_t m_dsWakeupTimer;
 
 	public:
 
@@ -204,6 +204,7 @@ protected:
 
 		bool m_lowPowerDevice;
 		bool m_lowPowerDeviceCharging;
+		bool m_enableSleepWhenCharging;
 		long m_TotalLoops;
 		int m_iotBoxInfoCounter;
 

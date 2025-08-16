@@ -45,6 +45,7 @@ Application::Application() : 	m_logLevel(shpllStatus),
 															m_clientUART(NULL),
 															m_lowPowerDevice(false),
 															m_lowPowerDeviceCharging(false),
+															m_enableSleepWhenCharging(true),
 															m_disableAutoSleep(false),
 															m_autoSleepEnabled(false),
 															m_doCheckAutoSleep(false),
@@ -53,6 +54,10 @@ Application::Application() : 	m_logLevel(shpllStatus),
 															m_SendIotBoxInfoTimeout(0),
 															m_SendIotBoxInfoNextSend(0)
 {
+	#ifdef SHP_POWER_BATT_CHARGER
+	m_lowPowerDevice = true;
+	#endif
+
 	m_clientUART = new ShpClientUART();
 
 	m_deviceNdx = 0;
@@ -714,7 +719,7 @@ void Application::doSleep()
 {
 	checkBeforeSleep();
 
-	log(shpllStatus, "sleep");
+	//log(shpllStatus, "sleep");
 
 	#ifdef SHP_WIFI
 	esp_wifi_stop();
@@ -729,7 +734,7 @@ void Application::doSleep()
 	if (m_dsWakeupTimer)
 	{
 		Serial.printf("=== Set deep sleep wakeup timer to %d secs ===\n", m_dsWakeupTimer);
-		esp_sleep_enable_timer_wakeup(m_dsWakeupTimer * 1000000);
+		esp_sleep_enable_timer_wakeup(m_dsWakeupTimer * 1000000ULL);
 	}
 
   g_lastRunTimeTotal = millis();
@@ -825,6 +830,11 @@ void Application::iotBoxInfo()
 		info.concat("\"devType\": \"" SHP_DEVICE_TYPE "\",");
 		info.concat("\"verFW\": \"" SHP_LIBS_VERSION "\",");
 		info.concat("\"verOS\": \""); info.concat(ESP.getSdkVersion()); info.concat("\",");
+
+		info.concat("\"verAL\": \""); info.concat(ESP_ARDUINO_VERSION_MAJOR); info.concat(".");
+		info.concat(ESP_ARDUINO_VERSION_MINOR); info.concat(".");
+		info.concat(ESP_ARDUINO_VERSION_PATCH); info.concat("\",");
+
 		info.concat("\"arch\": \""); info.concat("esp32"); info.concat("\"");
 		info.concat("}");
 	info.concat("}");
@@ -880,7 +890,8 @@ void Application::setIotBoxCfg(String data)
 
 		if (m_boxConfig.containsKey("dsWakeupTimer"))
 		{
-			m_dsWakeupTimer = m_boxConfig["dsWakeupTimer"];
+			int dswt = m_boxConfig["dsWakeupTimer"];
+			m_dsWakeupTimer = dswt;
 			Serial.print("dsWakeupTimer: ");
 			Serial.println(m_dsWakeupTimer);
 
@@ -993,20 +1004,21 @@ void Application::loop()
 		m_clientUART->loop();
 	}
 
+	unsigned long now = millis();
+
+	if (m_lowPowerDevice && !m_doCheckAutoSleep && now > 5 * 60 * 1000)
+	{
+		Serial.printf("=== EMERGENCY SLEEP FOR INACTIVITY: %d ms after boot ===\n", now);
+		setDSWakeupTimer(10 * 60); // 10 minutes
+		m_doCheckAutoSleep = true;
+		doSleep();
+		return;
+	}
+
   if (!app->m_serverConnected)
 	{
 		//Serial.println("Server not connected, skip loop");
 		//return;
-	}
-
-	unsigned long now = millis();
-
-	if (m_lowPowerDevice && !m_doCheckAutoSleep && !app->m_lowPowerDeviceCharging && now > 5 * 60 * 1000)
-	{
-		Serial.printf("=== EMERGENCY SLEEP FOR INACTIVITY: %d ms after boot ===\n", now);
-		setDSWakeupTimer(30 * 60); // 30 minutes
-		m_doCheckAutoSleep = true;
-		return;
 	}
 
 
@@ -1051,7 +1063,7 @@ void Application::loop()
 
 	if (m_autoSleepEnabled && m_doCheckAutoSleep && m_TotalLoops > 10)
 	{
-		if (!m_lowPowerDeviceCharging)
+		if (!m_lowPowerDeviceCharging || m_enableSleepWhenCharging)
 			checkAutoSleep();
 	}
 
