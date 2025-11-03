@@ -357,6 +357,8 @@ void Application::initIOPorts()
 		#endif
 		else if (strcmp(portType, "sensor/meteo-bme280") == 0)
 			newPort = new ShpMeteoBME280();
+		else if (strcmp(portType, "sensor/meteo-bme68x") == 0)
+			newPort = new ShpMeteoBME68x();
 		else if (strcmp(portType, "sensor/meteo-bmp280") == 0)
 			newPort = new ShpMeteoBMP280();
 		else if (strcmp(portType, "meteoBH1750") == 0)

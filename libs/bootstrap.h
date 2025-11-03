@@ -56,6 +56,7 @@
 #endif
 #include <meteo/meteoBME280.h>
 #include <meteo/meteoBMP280.h>
+#include <meteo/meteoBME68x.h>
 #include <meteo/meteoSHT40.h>
 
 #include <BH1750.h>

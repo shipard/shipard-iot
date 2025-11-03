@@ -59,6 +59,7 @@
 #endif
 #include <meteo/meteoBME280.cpp>
 #include <meteo/meteoBMP280.cpp>
+#include <meteo/meteoBME68x.cpp>
 #include <meteo/meteoSHT40.cpp>
 #include <meteo/meteoBH1750.cpp>
 
