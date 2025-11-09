@@ -54,15 +54,22 @@
 
 
 // ===================================
+#ifdef GxEPD2_DRIVER_CLASS
 #include <GxEPD2_BW.h>
 #include <GxEPD2_3C.h>
 #include <GxEPD2_4C.h>
 #include <GxEPD2_7C.h>
+#endif
 
 
 
 //#include <bootstrap.h>
 
+#include <epd/epdDisplayDeviceCore.h>
+#ifdef GxEPD2_DRIVER_CLASS
+#include <epd/epdDisplayDeviceGxEPD2.h>
+#endif
+#include <epd/epdDisplayDevice133S6.h>
 #include <epd/epdDisplay.h>
 
 
@@ -72,7 +79,7 @@
 ApplicationLan *app = new ApplicationLan();
 
 #if defined(ESP32) && defined(USE_HSPI_FOR_EPD)
-SPIClass hspi(HSPI);
+//SPIClass hspi(HSPI);
 #endif
 
 
@@ -96,7 +103,7 @@ void setup()
   //display.hibernate();
   //display.powerOff();
 
-  Serial.println("\r\nInitialisation done.");
+  //xSerial.println("\r\nInitialisation done.");
 }
 
 void loop()
@@ -107,4 +114,9 @@ void loop()
 
 #include <bootstrap.cpp>
 #include <epd/epdDisplay.cpp>
+#include <epd/epdDisplayDeviceCore.cpp>
+#ifdef GxEPD2_DRIVER_CLASS
+#include <epd/epdDisplayDeviceGxEPD2.cpp>
+#endif
+#include <epd/epdDisplayDevice133S6.cpp>
 #include <applicationLan.cpp>

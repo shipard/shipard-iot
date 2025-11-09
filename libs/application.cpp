@@ -45,7 +45,7 @@ Application::Application() : 	m_logLevel(shpllStatus),
 															m_clientUART(NULL),
 															m_lowPowerDevice(false),
 															m_lowPowerDeviceCharging(false),
-															m_enableSleepWhenCharging(true),
+															m_enableSleepWhenCharging(false),
 															m_disableAutoSleep(false),
 															m_autoSleepEnabled(false),
 															m_doCheckAutoSleep(false),
@@ -78,9 +78,9 @@ void Application::setup()
 {
 	WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
 
-	#ifdef SHP_SERIAL_DEBUG_ON
+	//#ifdef SHP_SERIAL_DEBUG_ON
   Serial.begin(115200);
-	#endif
+	//#endif
 
 		Serial.println("APP-SETUP1");
 

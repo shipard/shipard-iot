@@ -27,8 +27,8 @@ bool ApplicationLan::eth_connected = false;
 
 void WiFiEvent2(WiFiEvent_t event)
 {
-	Serial.println("WiFiEvent2");
-	Serial.println(event);
+	//Serial.println("WiFiEvent2");
+	//Serial.println(event);
   switch (event)
   {
 		#ifdef SHP_ETH

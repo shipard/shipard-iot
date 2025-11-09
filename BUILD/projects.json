@@ -77,6 +77,9 @@
 				},
 				"epd-esp32-wifi-GxEPD2_1248": {
 					"title": "epd-esp32-wifi-GxEPD2_1248"
+				},
+				"epd-esp32S3-wifi-133S6": {
+					"title": "epd-esp32S3-wifi-133S6"
 				}
 			}
 		}

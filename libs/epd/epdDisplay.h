@@ -29,11 +29,6 @@ class ShpEpdDisplay : public ShpIOPort
 		void parseFileHeader (const uint8_t *hdr);
 
 	protected:
-
-		void helloWorld();
-		uint32_t showBitmap_HTTP(const char *url);
-		void showBitmap_PSRAM();
-
 		String m_epdId;
 		uint8_t m_phase;
 		bool m_imageLoaded;
@@ -42,8 +37,6 @@ class ShpEpdDisplay : public ShpIOPort
 		long m_imageReloadInterval;
 
 		bool m_imgInfoLoaded;
-		uint16_t m_imgWidth;
-		uint16_t m_imgHeight;
 		uint8_t m_imgOrientation;
 		uint8_t m_sleepReloadMode;
 		int m_sleepReloadInterval;
@@ -51,9 +44,14 @@ class ShpEpdDisplay : public ShpIOPort
 		int m_newImageVersion;
 		bool m_loadNewImageVersionDone;
 
-		byte* m_imgData;
-		uint32_t m_imgDataSize;
 
+		ShpEpdDisplayDeviceCore* m_displayDevice;
+
+		public:
+			uint16_t m_imgWidth;
+			uint16_t m_imgHeight;
+			byte* m_imgData;
+			uint32_t m_imgDataSize;
 };
 
 

@@ -5,10 +5,13 @@ ShpClientUART::ShpClientUART() : m_rowAppended(0)
 {
 }
 
-
 void ShpClientUART::loop()
 {
-  HardwareSerial *m_hwSerial = &Serial;
+  #if ARDUINO_USB_CDC_ON_BOOT == 1
+    HWCDC *m_hwSerial = &Serial;
+  #else
+    HardwareSerial *m_hwSerial = &Serial;
+  #endif
 
 	while (m_hwSerial->available())
 	{
